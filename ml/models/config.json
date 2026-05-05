@@ -1,0 +1,25 @@
+{
+  "feature_columns": [
+    "num_events",
+    "ai_events",
+    "ai_ratio",
+    "avg_pct_workforce",
+    "unique_industries",
+    "unique_countries",
+    "unemployment_rate",
+    "jolts_job_openings_k",
+    "openings_per_unemployed",
+    "tech_emp_yoy_pct",
+    "avg_sentiment",
+    "negative_ratio",
+    "num_articles",
+    "layoff_articles",
+    "layoffs_lag1",
+    "layoffs_lag2",
+    "layoffs_lag3",
+    "layoffs_rolling3",
+    "events_lag1"
+  ],
+  "target_column": "total_layoffs",
+  "best_model": "RandomForest"
+}

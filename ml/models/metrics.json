@@ -1,0 +1,47 @@
+{
+  "best_model": "RandomForest",
+  "feature_columns": [
+    "num_events",
+    "ai_events",
+    "ai_ratio",
+    "avg_pct_workforce",
+    "unique_industries",
+    "unique_countries",
+    "unemployment_rate",
+    "jolts_job_openings_k",
+    "openings_per_unemployed",
+    "tech_emp_yoy_pct",
+    "avg_sentiment",
+    "negative_ratio",
+    "num_articles",
+    "layoff_articles",
+    "layoffs_lag1",
+    "layoffs_lag2",
+    "layoffs_lag3",
+    "layoffs_rolling3",
+    "events_lag1"
+  ],
+  "target_column": "total_layoffs",
+  "n_samples": 70,
+  "n_features": 19,
+  "models": {
+    "RandomForest": {
+      "cv_mae_mean": 5504.92,
+      "cv_mae_std": 3556.96,
+      "cv_rmse_mean": 7987.17,
+      "cv_rmse_std": 5644.08,
+      "train_mae": 1904.32,
+      "train_rmse": 3892.57,
+      "train_r2": 0.8513
+    },
+    "GradientBoosting": {
+      "cv_mae_mean": 5547.07,
+      "cv_mae_std": 3788.74,
+      "cv_rmse_mean": 7967.47,
+      "cv_rmse_std": 5979.22,
+      "train_mae": 2.8,
+      "train_rmse": 3.62,
+      "train_r2": 1.0
+    }
+  }
+}
