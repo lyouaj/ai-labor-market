@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Brain, BarChart3, TrendingUp, TrendingDown, AlertTriangle,
   Newspaper, Users, Activity, ChevronRight, Info, CalendarRange,
-  ShieldCheck
+  ShieldCheck, Factory
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -90,6 +90,8 @@ function ChartTooltip({ active, payload, label }) {
 export default function PredictionPage() {
   const [countries, setCountries] = useState([])
   const [selectedCountry, setSelectedCountry] = useState('')
+  const [industries, setIndustries] = useState([])
+  const [selectedIndustry, setSelectedIndustry] = useState('')
   const [period, setPeriod] = useState('quarterly')
   const [context, setContext] = useState(null)
   const [features, setFeatures] = useState(null)
@@ -99,17 +101,35 @@ export default function PredictionPage() {
   const [activeIndicator, setActiveIndicator] = useState(null)
 
   useEffect(() => {
-    fetchFilters().then(d => setCountries(d.countries || [])).catch(console.error)
+    fetchFilters().then(d => {
+      setCountries(d.countries || [])
+    }).catch(console.error)
   }, [])
 
   const handleCountryChange = async (e) => {
     const country = e.target.value
     setSelectedCountry(country)
+    setSelectedIndustry('')
     setForecast(null); setFeatures(null); setContext(null)
+    setIndustries([])
     if (!country) return
     setLoadingCountry(true)
     try {
       const data = await fetchCountryFeatures(country)
+      setFeatures(data.features); setContext(data.context)
+      setIndustries(data.context?.country_industries || [])
+    } catch (err) { console.error(err) }
+    finally { setLoadingCountry(false) }
+  }
+
+  const handleIndustryChange = async (e) => {
+    const industry = e.target.value
+    setSelectedIndustry(industry)
+    setForecast(null)
+    if (!selectedCountry) return
+    setLoadingCountry(true)
+    try {
+      const data = await fetchCountryFeatures(selectedCountry, industry || null)
       setFeatures(data.features); setContext(data.context)
     } catch (err) { console.error(err) }
     finally { setLoadingCountry(false) }
@@ -119,7 +139,7 @@ export default function PredictionPage() {
     if (!features || !selectedCountry) return
     setLoading(true)
     try {
-      const result = await postForecast(selectedCountry, period)
+      const result = await postForecast(selectedCountry, period, selectedIndustry || null)
       setForecast(result)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
@@ -190,7 +210,7 @@ export default function PredictionPage() {
     <>
       <div className="page-head">
         <h1>Prévision des Licenciements</h1>
-        <p>Modèle prédictif multi-périodes — sélectionnez un pays et un horizon</p>
+        <p>Modèle prédictif multi-périodes — sélectionnez un pays, un secteur et un horizon</p>
       </div>
 
       <div className="forecast-layout">
@@ -214,8 +234,24 @@ export default function PredictionPage() {
               </select>
             </div>
 
+            {/* Industry / Sector Select */}
+            <label className="forecast-label" style={{ marginTop: 12 }}>
+              <Factory size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+              Secteur / Industrie
+            </label>
+            <div className="select-wrapper" id="industry-select">
+              <select
+                value={selectedIndustry}
+                onChange={handleIndustryChange}
+                disabled={!selectedCountry || industries.length === 0}
+              >
+                <option value="">Tous les secteurs</option>
+                {industries.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+              </select>
+            </div>
+
             {/* Period Select */}
-            <label className="forecast-label">Période de prédiction</label>
+            <label className="forecast-label" style={{ marginTop: 12 }}>Période de prédiction</label>
             <div className="period-toggle" id="period-select">
               <button
                 className={`period-btn ${period === 'quarterly' ? 'active' : ''}`}
@@ -243,10 +279,16 @@ export default function PredictionPage() {
             {context && (
               <div className="country-context fade-in">
                 <div className="context-row"><span className="context-label">Pays</span><span className="context-value">{context.country}</span></div>
+                {context.industry && (
+                  <div className="context-row"><span className="context-label">Secteur</span><span className="context-value highlight">{context.industry}</span></div>
+                )}
                 <div className="context-row"><span className="context-label">Total Licenciements</span><span className="context-value">{context.country_total_layoffs.toLocaleString()}</span></div>
                 <div className="context-row"><span className="context-label">Événements</span><span className="context-value">{context.country_total_events}</span></div>
                 <div className="context-row"><span className="context-label">Événements IA</span><span className="context-value">{context.country_ai_events}</span></div>
                 <div className="context-row"><span className="context-label">Industrie #1</span><span className="context-value">{context.country_top_industry}</span></div>
+                {context.country_unemployment && (
+                  <div className="context-row"><span className="context-label">Chômage Pays</span><span className="context-value">{context.country_unemployment}%</span></div>
+                )}
               </div>
             )}
 
@@ -291,13 +333,15 @@ export default function PredictionPage() {
                 <BarChart3 size={48} strokeWidth={1.2} />
               </div>
               <h4>Aucune prévision générée</h4>
-              <p>Sélectionnez un pays et une période, puis cliquez sur <strong>Générer la Prévision</strong></p>
+              <p>Sélectionnez un pays, un secteur et une période, puis cliquez sur <strong>Générer la Prévision</strong></p>
               <div className="forecast-empty-steps">
                 <div className="forecast-step"><span className="forecast-step-num">1</span>Choisir un pays</div>
                 <ChevronRight size={14} className="forecast-step-arrow" />
-                <div className="forecast-step"><span className="forecast-step-num">2</span>Sélectionner la période</div>
+                <div className="forecast-step"><span className="forecast-step-num">2</span>Choisir un secteur</div>
                 <ChevronRight size={14} className="forecast-step-arrow" />
-                <div className="forecast-step"><span className="forecast-step-num">3</span>Générer</div>
+                <div className="forecast-step"><span className="forecast-step-num">3</span>Sélectionner la période</div>
+                <ChevronRight size={14} className="forecast-step-arrow" />
+                <div className="forecast-step"><span className="forecast-step-num">4</span>Générer</div>
               </div>
             </div>
           )}

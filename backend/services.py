@@ -176,22 +176,45 @@ class AnalyticsService:
         return [{"month": r['year_month'], "total": int(r['total']),
                  "events": int(r['events'])} for _, r in recent.iterrows()]
 
-    def get_country_features(self, country: str):
+    def get_country_features(self, country: str, industry: str = None):
         df = self.store.layoffs.copy()
         cdf = df[df['country'] == country]
         if cdf.empty:
             return None
-        monthly = df.groupby('year_month').agg(
+
+        # If industry filter is provided, apply it
+        if industry:
+            cdf_filtered = cdf[cdf['industry'] == industry]
+            # Use filtered data if it has rows, otherwise fallback to country-only
+            if not cdf_filtered.empty:
+                cdf = cdf_filtered
+
+        # ── Use COUNTRY-SPECIFIC data for monthly aggregation ──
+        monthly = cdf.groupby('year_month').agg(
             total_layoffs=('layoff_count', 'sum'), num_events=('company', 'count'),
             ai_events=('is_ai_company', 'sum'), avg_pct_workforce=('pct_workforce', 'mean'),
             unique_industries=('industry', 'nunique'), unique_countries=('country', 'nunique'),
         ).reset_index().sort_values('year_month')
+
         latest = monthly.iloc[-1]
         prev1 = monthly.iloc[-2] if len(monthly) >= 2 else latest
         prev2 = monthly.iloc[-3] if len(monthly) >= 3 else latest
         prev3 = monthly.iloc[-4] if len(monthly) >= 4 else latest
+
+        # ── Country-specific unemployment from global labor indicators ──
+        gl = self.store.global_labor
+        country_labor = gl[gl['country_name'].str.lower() == country.lower()]
+        if not country_labor.empty:
+            cl_latest = country_labor.sort_values('year').iloc[-1]
+            country_unemployment = round(float(cl_latest.get('unemployment_rate_pct', 4.0)), 2)
+        else:
+            country_unemployment = 4.0  # fallback
+
+        # US labor as secondary indicator
         us = self.store.us_labor.sort_values('date')
         ul = us.iloc[-1] if len(us) > 0 else None
+
+        # Sentiment
         sent = self.store.sentiment.copy()
         sm = sent.groupby('year_month').agg(
             avg_sentiment=('sentiment', 'mean'),
@@ -200,6 +223,7 @@ class AnalyticsService:
             layoff_articles=('is_layoff_news', 'sum'),
         ).reset_index().sort_values('year_month')
         sl = sm.iloc[-1] if len(sm) > 0 else None
+
         r3 = monthly.tail(3)['total_layoffs'].mean()
         ne = int(latest['num_events'])
         ae = int(latest['ai_events'])
@@ -209,7 +233,7 @@ class AnalyticsService:
             "avg_pct_workforce": round(float(latest.get('avg_pct_workforce', 15)), 2),
             "unique_industries": int(latest.get('unique_industries', 10)),
             "unique_countries": int(latest.get('unique_countries', 10)),
-            "unemployment_rate": round(float(ul['unemployment_rate']), 2) if ul is not None else 4.0,
+            "unemployment_rate": country_unemployment,
             "jolts_job_openings_k": round(float(ul.get('jolts_job_openings_k', 8000)), 1) if ul is not None else 8000,
             "openings_per_unemployed": round(float(ul.get('openings_per_unemployed', 1.2)), 2) if ul is not None else 1.2,
             "tech_emp_yoy_pct": round(float(ul.get('tech_emp_yoy_pct', 1.0)), 2) if ul is not None else 1.0,
@@ -223,13 +247,21 @@ class AnalyticsService:
             "layoffs_rolling3": round(float(r3), 1),
             "events_lag1": int(prev1['num_events']),
         }
-        ti = cdf.groupby('industry')['layoff_count'].sum().sort_values(ascending=False)
+
+        # Build industries list for this country
+        all_cdf = df[df['country'] == country]
+        ti = all_cdf.groupby('industry')['layoff_count'].sum().sort_values(ascending=False)
+        industries_list = ti.index.tolist()
+
         context = {
             "country": country,
+            "industry": industry,
             "country_total_layoffs": int(cdf['layoff_count'].sum()),
             "country_total_events": len(cdf),
             "country_ai_events": int(cdf['is_ai_company'].sum()),
             "country_top_industry": ti.index[0] if len(ti) > 0 else "N/A",
+            "country_industries": industries_list,
+            "country_unemployment": country_unemployment,
         }
         return {"features": features, "context": context}
 

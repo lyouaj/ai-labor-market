@@ -44,8 +44,9 @@ export async function fetchEvents(filters = {}) {
   return r.json()
 }
 
-export async function fetchCountryFeatures(country) {
-  const r = await fetch(`${BASE}/country-features/${encodeURIComponent(country)}`)
+export async function fetchCountryFeatures(country, industry = null) {
+  const params = industry ? `?industry=${encodeURIComponent(industry)}` : ''
+  const r = await fetch(`${BASE}/country-features/${encodeURIComponent(country)}${params}`)
   return r.json()
 }
 
@@ -58,11 +59,13 @@ export async function postPredict(features) {
   return r.json()
 }
 
-export async function postForecast(country, period = 'quarterly') {
+export async function postForecast(country, period = 'quarterly', industry = null) {
+  const body = { country, period }
+  if (industry) body.industry = industry
   const r = await fetch(`${BASE}/forecast`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ country, period }),
+    body: JSON.stringify(body),
   })
   return r.json()
 }

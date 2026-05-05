@@ -88,8 +88,8 @@ async def get_events(
 
 # ── Country features (for prediction) ─────────────────
 @router.get("/country-features/{country}")
-async def get_country_features(country: str):
-    result = analytics.get_country_features(country)
+async def get_country_features(country: str, industry: Optional[str] = None):
+    result = analytics.get_country_features(country, industry)
     if result is None:
         raise HTTPException(404, f"Country '{country}' not found")
     return result
@@ -129,13 +129,14 @@ async def predict(req: PredictRequest):
 # ── Multi-period Forecast ─────────────────────────────
 class ForecastRequest(BaseModel):
     country: str
+    industry: Optional[str] = None
     period: str = Field(default="quarterly", pattern="^(quarterly|semiannual)$")
 
 
 @router.post("/forecast")
 async def forecast(req: ForecastRequest):
-    # Get country features
-    country_data = analytics.get_country_features(req.country)
+    # Get country features (optionally filtered by industry)
+    country_data = analytics.get_country_features(req.country, req.industry)
     if country_data is None:
         raise HTTPException(404, f"Country '{req.country}' not found")
     try:

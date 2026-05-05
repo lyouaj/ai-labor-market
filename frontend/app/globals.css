@@ -389,6 +389,14 @@ a { text-decoration: none; color: inherit; }
 
 .context-label { color: var(--text-tertiary); }
 .context-value { font-weight: 600; color: var(--text-primary); }
+.context-value.highlight { color: var(--accent-blue); }
+
+.select-wrapper select:disabled {
+  background: var(--surface-alt);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
 
 .predict-btn {
   width: 100%;
