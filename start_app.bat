@@ -12,8 +12,14 @@ cd /d "%~dp0"
 
 :: ── Install Python dependencies if needed ──
 echo [1/4] Checking Python dependencies...
-pip install fastapi uvicorn pandas numpy scikit-learn joblib pydantic >nul 2>&1
-echo       Done.
+python -c "import fastapi, uvicorn, pandas, numpy, sklearn, joblib, pydantic" 2>nul
+if errorlevel 1 (
+    echo       Installing Python packages...
+    pip install fastapi uvicorn pandas numpy scikit-learn joblib pydantic >nul 2>&1
+    echo       Done.
+) else (
+    echo       All packages found, skipping.
+)
 echo.
 
 :: ── Install frontend dependencies if needed ──
@@ -31,10 +37,23 @@ echo.
 :: ── Start Backend ──
 echo [3/4] Starting Backend (FastAPI) on port 8000...
 start "Backend - FastAPI" cmd /k "cd /d %~dp0 && uvicorn backend.main:app --reload --port 8000"
-ping 127.0.0.1 -n 4 >nul
-echo       Backend started.
+
+:: Wait for backend to be ready (health check)
+echo       Waiting for backend to be ready...
+set RETRIES=0
+:wait_backend
+set /a RETRIES+=1
+if %RETRIES% gtr 30 (
+    echo       WARNING: Backend did not respond after 30s. Continuing anyway...
+    goto start_frontend
+)
+ping 127.0.0.1 -n 2 >nul
+curl -s http://localhost:8000/ >nul 2>&1
+if errorlevel 1 goto wait_backend
+echo       Backend is ready!
 echo.
 
+:start_frontend
 :: ── Start Frontend ──
 echo [4/4] Starting Frontend (Next.js) on port 3000...
 start "Frontend - Next.js" cmd /k "cd /d %~dp0frontend && npm run dev"

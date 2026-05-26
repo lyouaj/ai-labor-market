@@ -1,21 +1,16 @@
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
+import LayoutShell from '@/components/LayoutShell'
 
 export const metadata = {
   title: 'IA Travail — Intelligence du Marché',
-  description: 'Tableau de bord analytique du marché du travail alimenté par l\'IA avec prévisions',
+  description: 'Plateforme d\'analyse prédictive du marché du travail alimentée par l\'IA — Tableau de bord, prévisions et sentiment NLP',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body>
-        <div className="app-layout">
-          <Sidebar />
-          <main className="main-area">
-            {children}
-          </main>
-        </div>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   )

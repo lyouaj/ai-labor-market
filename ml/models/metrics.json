@@ -43,5 +43,38 @@
       "train_rmse": 3.62,
       "train_r2": 1.0
     }
+  },
+  "quarterly": {
+    "granularity": "quarterly",
+    "test_mae": 1965.26,
+    "test_mape": 295.99,
+    "test_r2": -0.0607,
+    "train_mae": 655.79,
+    "train_r2": 0.536,
+    "overfit_ratio": 0.3337,
+    "residuals_std": 5402.22,
+    "best_iteration": 19,
+    "n_train": 356,
+    "n_test": 45,
+    "n_features": 26,
+    "trained_at": "2026-05-09T13:16:31.670181",
+    "model_saved": true
+  },
+  "last_trained": "2026-05-09T13:16:40.286766",
+  "semester": {
+    "granularity": "semester",
+    "test_mae": 1974.82,
+    "test_mape": 304.71,
+    "test_r2": 0.3889,
+    "train_mae": 350.18,
+    "train_r2": 0.9195,
+    "overfit_ratio": 0.1773,
+    "residuals_std": 4603.92,
+    "best_iteration": 120,
+    "n_train": 178,
+    "n_test": 36,
+    "n_features": 26,
+    "trained_at": "2026-05-09T13:16:40.263145",
+    "model_saved": true
   }
 }

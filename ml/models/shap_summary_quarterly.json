@@ -1,0 +1,73 @@
+{
+  "granularity": "quarterly",
+  "top_features": [
+    {
+      "feature": "lag_1",
+      "importance": 0.2435
+    },
+    {
+      "feature": "openings_per_unemployed",
+      "importance": 0.1169
+    },
+    {
+      "feature": "pct_change_1",
+      "importance": 0.1083
+    },
+    {
+      "feature": "lag_6",
+      "importance": 0.0684
+    },
+    {
+      "feature": "lag_3",
+      "importance": 0.0648
+    },
+    {
+      "feature": "rolling_std_3",
+      "importance": 0.0465
+    },
+    {
+      "feature": "rolling_mean_6",
+      "importance": 0.0459
+    },
+    {
+      "feature": "lag_2",
+      "importance": 0.0392
+    },
+    {
+      "feature": "jolts_job_openings_k",
+      "importance": 0.0358
+    },
+    {
+      "feature": "financial_emp_k",
+      "importance": 0.0286
+    }
+  ],
+  "all_features": {
+    "lag_1": 0.2435,
+    "openings_per_unemployed": 0.1169,
+    "pct_change_1": 0.1083,
+    "lag_6": 0.0684,
+    "lag_3": 0.0648,
+    "rolling_std_3": 0.0465,
+    "rolling_mean_6": 0.0459,
+    "lag_2": 0.0392,
+    "jolts_job_openings_k": 0.0358,
+    "financial_emp_k": 0.0286,
+    "tech_emp_yoy_pct": 0.026,
+    "num_events": 0.0258,
+    "avg_pct_workforce": 0.0243,
+    "information_sector_emp_k": 0.0229,
+    "rolling_mean_3": 0.0205,
+    "month": 0.0178,
+    "pct_change_3": 0.0171,
+    "industry_encoded": 0.0167,
+    "claims_4w_avg": 0.0109,
+    "year": 0.0098,
+    "country_encoded": 0.0064,
+    "quarter_num": 0.0021,
+    "ai_events": 0.0014,
+    "unemployment_rate": 0.0003,
+    "is_q1": 0.0,
+    "computer_math_emp_k": 0.0
+  }
+}

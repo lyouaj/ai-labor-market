@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+import time
 
 ML_DIR = Path(__file__).resolve().parent.parent / "ml"
 MODEL_DIR = ML_DIR / "models"
@@ -14,6 +15,7 @@ class DataStore:
     """Singleton-like store: loads and cleans data once on startup."""
 
     def __init__(self):
+        t0 = time.time()
         self.layoffs = self._load_layoffs()
         self.us_labor = self._load_us_labor()
         self.global_labor = pd.read_csv(DATASETS_DIR / "global_labor_indicators.csv")
@@ -21,6 +23,9 @@ class DataStore:
         # Pre-compute filter options
         self.country_list = sorted(self.layoffs['country'].dropna().unique().tolist())
         self.industry_list = sorted(self.layoffs['industry'].dropna().unique().tolist())
+        # Pre-compute sentiment aggregation (never changes)
+        self._sentiment_agg = self._precompute_sentiment()
+        print(f"DataStore loaded in {time.time()-t0:.2f}s")
 
     def _load_layoffs(self):
         df = pd.read_csv(DATASETS_DIR / "layoffs_events.csv")
@@ -48,21 +53,32 @@ class DataStore:
         df['year_month'] = df['date'].dt.to_period('M').astype(str)
         return df
 
+    def _precompute_sentiment(self):
+        """Pre-compute sentiment aggregation once at startup."""
+        sent = self.sentiment
+        agg = sent.groupby('year_month').agg(
+            sentiment=('sentiment', 'mean'),
+            neg_ratio=('sentiment_cat', lambda x: round((x == 'negative').mean(), 3)),
+            count=('title', 'count'),
+        ).reset_index().sort_values('year_month')
+        return agg
+
     # ── Filtering helper ───────────────────────────────
     def filter_layoffs(self, country=None, industry=None,
                        start_date=None, end_date=None, is_ai=None):
-        df = self.layoffs.copy()
+        # Build a boolean mask instead of copying the entire DataFrame
+        mask = pd.Series(True, index=self.layoffs.index)
         if country:
-            df = df[df['country'] == country]
+            mask &= self.layoffs['country'] == country
         if industry:
-            df = df[df['industry'] == industry]
+            mask &= self.layoffs['industry'] == industry
         if start_date:
-            df = df[df['date'] >= pd.to_datetime(start_date)]
+            mask &= self.layoffs['date'] >= pd.to_datetime(start_date)
         if end_date:
-            df = df[df['date'] <= pd.to_datetime(end_date)]
+            mask &= self.layoffs['date'] <= pd.to_datetime(end_date)
         if is_ai is not None:
-            df = df[df['is_ai_company'] == is_ai]
-        return df
+            mask &= self.layoffs['is_ai_company'] == is_ai
+        return self.layoffs[mask]
 
 
 class AnalyticsService:
@@ -131,16 +147,12 @@ class AnalyticsService:
                  "events": int(r['events'])} for _, r in agg.iterrows()]
 
     def get_sentiment(self, limit=50):
-        sent = self.store.sentiment.copy()
-        agg = sent.groupby('year_month').agg(
-            sentiment=('sentiment', 'mean'),
-            neg_ratio=('sentiment_cat', lambda x: round((x == 'negative').mean(), 3)),
-            count=('title', 'count'),
-        ).reset_index().sort_values('year_month').tail(limit)
-        return [{"month": r['year_month'],
-                 "sentiment": round(float(r['sentiment']), 3),
-                 "neg_ratio": float(r['neg_ratio']),
-                 "articles": int(r['count'])}
+        # Use pre-computed aggregation for speed
+        agg = self.store._sentiment_agg.tail(limit)
+        return [{'month': r['year_month'],
+                 'sentiment': round(float(r['sentiment']), 3),
+                 'neg_ratio': float(r['neg_ratio']),
+                 'articles': int(r['count'])}
                 for _, r in agg.iterrows()]
 
     def get_top_events(self, page=1, limit=20, country=None, industry=None,
@@ -176,6 +188,16 @@ class AnalyticsService:
         return [{"month": r['year_month'], "total": int(r['total']),
                  "events": int(r['events'])} for _, r in recent.iterrows()]
 
+    @staticmethod
+    def _safe_float(val, fallback=0.0):
+        """Convert a value to float, replacing NaN/Inf with a fallback."""
+        import math
+        try:
+            f = float(val)
+            return fallback if (math.isnan(f) or math.isinf(f)) else f
+        except (TypeError, ValueError):
+            return fallback
+
     def get_country_features(self, country: str, industry: str = None):
         df = self.store.layoffs.copy()
         cdf = df[df['country'] == country]
@@ -206,7 +228,7 @@ class AnalyticsService:
         country_labor = gl[gl['country_name'].str.lower() == country.lower()]
         if not country_labor.empty:
             cl_latest = country_labor.sort_values('year').iloc[-1]
-            country_unemployment = round(float(cl_latest.get('unemployment_rate_pct', 4.0)), 2)
+            country_unemployment = round(self._safe_float(cl_latest.get('unemployment_rate_pct', 4.0), 4.0), 2)
         else:
             country_unemployment = 4.0  # fallback
 
@@ -224,28 +246,28 @@ class AnalyticsService:
         ).reset_index().sort_values('year_month')
         sl = sm.iloc[-1] if len(sm) > 0 else None
 
-        r3 = monthly.tail(3)['total_layoffs'].mean()
+        r3 = self._safe_float(monthly.tail(3)['total_layoffs'].mean(), 0)
         ne = int(latest['num_events'])
         ae = int(latest['ai_events'])
         features = {
             "num_events": ne, "ai_events": ae,
             "ai_ratio": round(ae / max(ne, 1), 3),
-            "avg_pct_workforce": round(float(latest.get('avg_pct_workforce', 15)), 2),
+            "avg_pct_workforce": round(self._safe_float(latest.get('avg_pct_workforce', 15), 15), 2),
             "unique_industries": int(latest.get('unique_industries', 10)),
             "unique_countries": int(latest.get('unique_countries', 10)),
             "unemployment_rate": country_unemployment,
-            "jolts_job_openings_k": round(float(ul.get('jolts_job_openings_k', 8000)), 1) if ul is not None else 8000,
-            "openings_per_unemployed": round(float(ul.get('openings_per_unemployed', 1.2)), 2) if ul is not None else 1.2,
-            "tech_emp_yoy_pct": round(float(ul.get('tech_emp_yoy_pct', 1.0)), 2) if ul is not None else 1.0,
-            "avg_sentiment": round(float(sl['avg_sentiment']), 3) if sl is not None else 0.0,
-            "negative_ratio": round(float(sl['negative_ratio']), 3) if sl is not None else 0.3,
-            "num_articles": int(sl['num_articles']) if sl is not None else 10,
-            "layoff_articles": int(sl['layoff_articles']) if sl is not None else 3,
-            "layoffs_lag1": int(prev1['total_layoffs']),
-            "layoffs_lag2": int(prev2['total_layoffs']),
-            "layoffs_lag3": int(prev3['total_layoffs']),
-            "layoffs_rolling3": round(float(r3), 1),
-            "events_lag1": int(prev1['num_events']),
+            "jolts_job_openings_k": round(self._safe_float(ul.get('jolts_job_openings_k', 8000), 8000), 1) if ul is not None else 8000,
+            "openings_per_unemployed": round(self._safe_float(ul.get('openings_per_unemployed', 1.2), 1.2), 2) if ul is not None else 1.2,
+            "tech_emp_yoy_pct": round(self._safe_float(ul.get('tech_emp_yoy_pct', 1.0), 1.0), 2) if ul is not None else 1.0,
+            "avg_sentiment": round(self._safe_float(sl['avg_sentiment'], 0.0), 3) if sl is not None else 0.0,
+            "negative_ratio": round(self._safe_float(sl['negative_ratio'], 0.3), 3) if sl is not None else 0.3,
+            "num_articles": int(self._safe_float(sl['num_articles'], 10)) if sl is not None else 10,
+            "layoff_articles": int(self._safe_float(sl['layoff_articles'], 3)) if sl is not None else 3,
+            "layoffs_lag1": int(self._safe_float(prev1['total_layoffs'], 0)),
+            "layoffs_lag2": int(self._safe_float(prev2['total_layoffs'], 0)),
+            "layoffs_lag3": int(self._safe_float(prev3['total_layoffs'], 0)),
+            "layoffs_rolling3": round(self._safe_float(r3, 0), 1),
+            "events_lag1": int(self._safe_float(prev1['num_events'], 0)),
         }
 
         # Build industries list for this country
@@ -273,20 +295,34 @@ class PredictorService:
         self.config = {}
         self.feature_importance = {}
         self.metrics = {}
+        self._loaded = False
+        # Load lightweight config/metadata immediately (fast)
         try:
-            self.model = joblib.load(MODEL_DIR / "layoff_predictor.joblib")
-            self.scaler = joblib.load(MODEL_DIR / "scaler.joblib")
             with open(MODEL_DIR / "config.json") as f:
                 self.config = json.load(f)
             with open(MODEL_DIR / "feature_importance.json") as f:
                 self.feature_importance = json.load(f)
             with open(MODEL_DIR / "metrics.json") as f:
                 self.metrics = json.load(f)
-            print("ML models loaded.")
+            print("ML config loaded (model deferred).")
         except Exception as e:
-            print(f"ML load error: {e}")
+            print(f"ML config load error: {e}")
+
+    def _ensure_model(self):
+        """Lazily load heavy model/scaler on first prediction call."""
+        if self._loaded:
+            return
+        t0 = time.time()
+        try:
+            self.model = joblib.load(MODEL_DIR / "layoff_predictor.joblib")
+            self.scaler = joblib.load(MODEL_DIR / "scaler.joblib")
+            self._loaded = True
+            print(f"ML model loaded on demand in {time.time()-t0:.2f}s")
+        except Exception as e:
+            print(f"ML model load error: {e}")
 
     def predict(self, data: dict):
+        self._ensure_model()
         if not self.model or not self.scaler:
             raise Exception("Model not loaded.")
         cols = self.config.get("feature_columns", [])
@@ -310,6 +346,7 @@ class PredictorService:
                 'semiannual' = 6 future periods (one per month for 6 months)
         Each step feeds the predicted value back as lag features.
         """
+        self._ensure_model()
         if not self.model or not self.scaler:
             raise Exception("Model not loaded.")
 

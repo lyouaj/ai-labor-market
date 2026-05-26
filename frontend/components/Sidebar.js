@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Brain, Activity, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Activity, Home, Compass } from 'lucide-react'
 
 export default function Sidebar() {
   const pathname = usePathname()
   const links = [
-    { name: 'Aperçu', path: '/', icon: LayoutDashboard },
+    { name: 'Accueil', path: '/', icon: Home },
+    { name: 'Aperçu', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Recommandation', path: '/recommandation', icon: Compass },
     { name: 'Prévisions', path: '/prediction', icon: TrendingUp },
   ]
   return (

@@ -27,7 +27,7 @@
     "information_sector_emp_k",
     "computer_math_emp_k"
   ],
-  "granularity": "semester",
+  "granularity": "quarterly",
   "best_model": "XGBoost",
   "xgboost_params": {
     "n_estimators": 500,
