@@ -1,0 +1,41 @@
+# Python cache
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+
+# Python virtual envs
+.venv/
+venv/
+env/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Next.js build output (rebuilt by Vercel)
+frontend/.next/
+frontend/out/
+
+# Node dependencies (installed fresh by Vercel)
+frontend/node_modules/
+
+# Local env files (set these in Vercel dashboard)
+frontend/.env.local
+frontend/.env.*.local
+.env.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test / dev scripts (not needed in production)
+test_*.py
+scheduler.py
+start_app.bat
+curl_out.json
+anaconda_projects/

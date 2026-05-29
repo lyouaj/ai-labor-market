@@ -7,6 +7,8 @@
  *  - renvoi de l'erreur HTTP sous forme de message lisible
  */
 
+// NEXT_PUBLIC_API_URL is injected at build time by vercel.json ("build.env").
+// In local dev it falls back to the FastAPI dev server on port 8000.
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
 // ── Retry-capable fetch with timeout ──────────────────────────────────────────
