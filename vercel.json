@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/main.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -10,16 +10,17 @@
     },
     {
       "src": "frontend/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "zeroConfig": false
-      }
+      "use": "@vercel/next"
     }
   ],
   "routes": [
     {
+      "src": "/api/recommend(.*)",
+      "dest": "frontend/$1"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "backend/main.py"
+      "dest": "api/index.py"
     },
     {
       "src": "/(.*)",
