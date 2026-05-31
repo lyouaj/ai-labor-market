@@ -3,8 +3,15 @@ import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+import httpx
+import asyncio
+import os
+from dotenv import load_dotenv
+
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 ML_DIR = Path(__file__).resolve().parent.parent / "ml"
 MODEL_DIR = ML_DIR / "models"
@@ -397,3 +404,138 @@ class PredictorService:
                 "layoffs_rolling3": base_features.get("layoffs_rolling3", 0),
             },
         }
+
+
+class ExternalAPIService:
+    def __init__(self):
+        self.news_api_key = os.getenv("NEWS_API_KEY")
+        self.gnews_api_key = os.getenv("GNEWS_API_KEY")
+        self._cache = {}
+        self._cache_lock = asyncio.Lock()
+
+    async def _fetch_with_cache(self, cache_key: str, url: str, params: dict, ttl_seconds: int = 3600):
+        async with self._cache_lock:
+            # Check cache
+            if cache_key in self._cache:
+                entry = self._cache[cache_key]
+                if datetime.now() < entry['expires']:
+                    return entry['data']
+
+            # If not in cache or expired, fetch it
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(url, params=params, timeout=10.0)
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    self._cache[cache_key] = {
+                        'data': data,
+                        'expires': datetime.now() + timedelta(seconds=ttl_seconds)
+                    }
+                    return data
+            except Exception as e:
+                print(f"[ExternalAPIService] Error fetching {cache_key}: {e}")
+                # Fallback to expired cache if available, otherwise return None
+                if cache_key in self._cache:
+                    return self._cache[cache_key]['data']
+                return None
+
+    async def get_market_news(self):
+        """Fetch general job market / layoffs news from NewsAPI (1h cache)."""
+        if not self.news_api_key:
+            return {"error": "NEWS_API_KEY missing", "articles": []}
+            
+        url = "https://newsapi.org/v2/everything"
+        params = {
+            "q": 'layoffs OR "job market" OR unemployment OR "tech jobs"',
+            "language": "en",
+            "sortBy": "publishedAt",
+            "pageSize": 10,
+            "apiKey": self.news_api_key
+        }
+        
+        data = await self._fetch_with_cache("newsapi_market", url, params, ttl_seconds=3600)
+        
+        if not data or "articles" not in data:
+            return {"articles": []}
+            
+        # Format the response to be cleaner
+        formatted = []
+        for a in data.get("articles", []):
+            formatted.append({
+                "title": a.get("title", ""),
+                "description": a.get("description", ""),
+                "source": a.get("source", {}).get("name", "Unknown"),
+                "url": a.get("url", ""),
+                "date": a.get("publishedAt", ""),
+                "urlToImage": a.get("urlToImage", "")
+            })
+        return {"articles": formatted}
+
+    async def get_trending_news(self):
+        """Fetch trending employment news from GNews (1h cache)."""
+        if not self.gnews_api_key:
+            return {"error": "GNEWS_API_KEY missing", "articles": []}
+            
+        url = "https://gnews.io/api/v4/search"
+        params = {
+            "q": 'layoffs OR employment OR "job market"',
+            "lang": "en",
+            "max": 5,
+            "apikey": self.gnews_api_key
+        }
+        
+        data = await self._fetch_with_cache("gnews_trending", url, params, ttl_seconds=3600)
+        
+        if not data or "articles" not in data:
+            return {"articles": []}
+            
+        # Format response
+        formatted = []
+        for a in data.get("articles", []):
+            formatted.append({
+                "title": a.get("title", ""),
+                "description": a.get("description", ""),
+                "source": a.get("source", {}).get("name", "Unknown"),
+                "url": a.get("url", ""),
+                "date": a.get("publishedAt", ""),
+                "image": a.get("image", "")
+            })
+        return {"articles": formatted}
+
+    async def get_world_economy(self):
+        """Fetch world unemployment data from World Bank API (24h cache). No key required."""
+        # SL.UEM.TOTL.ZS is the indicator for Unemployment, total (% of total labor force)
+        url = "https://api.worldbank.org/v2/country/all/indicator/SL.UEM.TOTL.ZS"
+        params = {
+            "format": "json",
+            "mrv": 1,          # Most recent value
+            "per_page": 300    # Ensure we get all countries
+        }
+        
+        # 24h cache (86400 seconds) since World Bank data updates rarely
+        data = await self._fetch_with_cache("worldbank_unemployment", url, params, ttl_seconds=86400)
+        
+        if not data or len(data) < 2:
+            return {"data": []}
+            
+        # World bank format: [ {page_info}, [ {country_data}, ... ] ]
+        records = data[1]
+        
+        formatted = []
+        for r in records:
+            # Filter out regions/aggregates if possible, typically regions don't have country iso3code
+            # Actually, WB API includes regions. We'll filter to items that have a value.
+            val = r.get("value")
+            if val is not None:
+                formatted.append({
+                    "country": r.get("country", {}).get("value", "Unknown"),
+                    "unemployment_rate": round(float(val), 2),
+                    "year": r.get("date", "")
+                })
+        
+        # Sort by highest unemployment rate
+        formatted.sort(key=lambda x: x["unemployment_rate"], reverse=True)
+        
+        # Return top 50 to avoid massive payload
+        return {"data": formatted[:50]}

@@ -7,7 +7,7 @@ dans backend/main.py.
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from typing import Optional
-from backend.services import DataStore, AnalyticsService
+from backend.services import DataStore, AnalyticsService, ExternalAPIService
 from ml.pipeline.predict import Predictor
 from pydantic import BaseModel, Field
 import pandas as pd
@@ -20,6 +20,7 @@ router = APIRouter()
 store     = DataStore()
 analytics = AnalyticsService(store)
 predictor = Predictor()
+external_api = ExternalAPIService()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -348,3 +349,23 @@ async def retrain(background_tasks: BackgroundTasks):
         "message": "Ré-entraînement lancé en arrière-plan. "
                    "Consultez GET /api/metrics dans quelques minutes.",
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION : REAL-TIME DATA (External APIs)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/news", tags=["realtime"])
+async def get_market_news():
+    """Fetch general job market / layoffs news from NewsAPI."""
+    return await external_api.get_market_news()
+
+@router.get("/trending-news", tags=["realtime"])
+async def get_trending_news():
+    """Fetch trending employment news from GNews."""
+    return await external_api.get_trending_news()
+
+@router.get("/world-economy", tags=["realtime"])
+async def get_world_economy():
+    """Fetch world unemployment data from World Bank API."""
+    return await external_api.get_world_economy()

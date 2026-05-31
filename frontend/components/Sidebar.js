@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, TrendingUp, Activity, Home, Compass, MessageCircle, FileText } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Activity, Home, Compass, MessageCircle, FileText, Newspaper } from 'lucide-react'
 
 export default function Sidebar() {
   const pathname = usePathname()
   const links = [
     { name: 'Accueil', path: '/', icon: Home },
     { name: 'Aperçu', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Actualités', path: '/actualites', icon: Newspaper },
     { name: 'Recommandation', path: '/recommandation', icon: Compass },
     { name: 'CV Builder', path: '/cv-builder', icon: FileText },
     { name: 'Jobly Agent', path: '/jobly', icon: MessageCircle },

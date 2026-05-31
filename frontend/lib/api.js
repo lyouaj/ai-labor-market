@@ -222,3 +222,19 @@ export async function postPredict(features) {
     }
   )
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SECTION : REAL-TIME DATA (External APIs)
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function fetchMarketNews() {
+  return fetchWithRetry(`${BASE}/news`)
+}
+
+export async function fetchTrendingNews() {
+  return fetchWithRetry(`${BASE}/trending-news`)
+}
+
+export async function fetchWorldEconomy() {
+  return fetchWithRetry(`${BASE}/world-economy`)
+}

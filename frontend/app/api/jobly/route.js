@@ -17,12 +17,14 @@ Réponds toujours en français sauf si l'utilisateur pose sa question dans une a
 
 /* ── Fetch context from FastAPI backend ─────────────── */
 async function fetchBackendContext() {
-  const results = { summary: null, metrics: null }
+  const results = { summary: null, metrics: null, news: null, worldEconomy: null }
 
   try {
-    const [summaryRes, metricsRes] = await Promise.allSettled([
+    const [summaryRes, metricsRes, newsRes, weRes] = await Promise.allSettled([
       fetch(`${BACKEND_URL}/summary`, { cache: 'no-store' }),
       fetch(`${BACKEND_URL}/metrics`, { cache: 'no-store' }),
+      fetch(`${BACKEND_URL}/trending-news`, { cache: 'no-store' }),
+      fetch(`${BACKEND_URL}/world-economy`, { cache: 'no-store' }),
     ])
 
     if (summaryRes.status === 'fulfilled' && summaryRes.value.ok) {
@@ -30,6 +32,12 @@ async function fetchBackendContext() {
     }
     if (metricsRes.status === 'fulfilled' && metricsRes.value.ok) {
       results.metrics = await metricsRes.value.json()
+    }
+    if (newsRes.status === 'fulfilled' && newsRes.value.ok) {
+      results.news = await newsRes.value.json()
+    }
+    if (weRes.status === 'fulfilled' && weRes.value.ok) {
+      results.worldEconomy = await weRes.value.json()
     }
   } catch (err) {
     console.warn('[Jobly] Could not fetch backend context:', err.message)
@@ -62,6 +70,16 @@ function buildSystemPrompt(context, fileContent) {
       `Métriques modèle ML — MAE trimestriel : ${m.MAE_quarterly ?? 'N/A'}, MAPE : ${m.MAPE_quarterly ?? 'N/A'}, R² : ${m.R2_quarterly ?? 'N/A'}`,
       `Dernier entraînement : ${m.last_trained ?? 'N/A'}`,
     )
+  }
+
+  if (context.news && context.news.articles) {
+    const actus = context.news.articles.map(a => `- ${a.title} (${a.source})`).join('\n')
+    dataParts.push(`Actualités récentes du marché de l'emploi :\n${actus}`)
+  }
+
+  if (context.worldEconomy && context.worldEconomy.data) {
+    const topChomage = context.worldEconomy.data.slice(0, 10).map(c => `${c.country}: ${c.unemployment_rate}%`).join(', ')
+    dataParts.push(`Taux de chômage mondial (Top 10 les plus élevés) : ${topChomage}`)
   }
 
   if (dataParts.length > 0) {
