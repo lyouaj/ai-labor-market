@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   User, Briefcase, GraduationCap, Brain, Layout,
   Plus, Trash2, ChevronRight, ChevronLeft, Sparkles,
-  Download, FileText, RotateCcw, Edit3, X, Check
+  Download, FileText, RotateCcw, Edit3, X, Check, Save, CheckCircle2
 } from 'lucide-react'
 
 const STEPS = [
@@ -22,6 +23,7 @@ const EMPTY_FORMATION = { diplome: '', etablissement: '', annee: '', mention: ''
 const EMPTY_LANGUE = { langue: '', niveau: 'Intermédiaire' }
 
 export default function CvBuilderPage() {
+  const { data: session } = useSession()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     prenom: '', nom: '', titre: '', email: '', telephone: '', ville: '', pays: '',
@@ -34,10 +36,36 @@ export default function CvBuilderPage() {
   const [tagInputTech, setTagInputTech] = useState('')
   const [tagInputSoft, setTagInputSoft] = useState('')
   const [cvData, setCvData] = useState(null)
+  const [cvId, setCvId] = useState(null)
+  const [savedCV, setSavedCV] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const cvRef = useRef(null)
+
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Hydrate from sessionStorage AFTER first render to avoid mismatch
+  useEffect(() => {
+    setIsMounted(true)
+    const sStep = sessionStorage.getItem('cv_step')
+    if (sStep) setStep(Number(sStep))
+    
+    const sFormData = sessionStorage.getItem('cv_formData')
+    if (sFormData) setFormData(JSON.parse(sFormData))
+    
+    const sCvData = sessionStorage.getItem('cv_cvData')
+    if (sCvData) setCvData(JSON.parse(sCvData))
+    
+    const sShowPreview = sessionStorage.getItem('cv_showPreview')
+    if (sShowPreview) setShowPreview(sShowPreview === 'true')
+  }, [])
+
+  // Persist state to sessionStorage
+  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_formData', JSON.stringify(formData)) }, [formData, isMounted])
+  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_step', String(step)) }, [step, isMounted])
+  useEffect(() => { if (isMounted && cvData) sessionStorage.setItem('cv_cvData', JSON.stringify(cvData)) }, [cvData, isMounted])
+  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_showPreview', String(showPreview)) }, [showPreview, isMounted])
 
   // ── Field updaters ──
   const updateField = (field, value) => setFormData(p => ({ ...p, [field]: value }))
@@ -99,8 +127,24 @@ export default function CvBuilderPage() {
         throw new Error(err.error || `Erreur ${res.status}`)
       }
       const data = await res.json()
-      setCvData(data)
+      setCvData(data.cv)
       setShowPreview(true)
+      setSavedCV(false)
+      // Auto-save CV to MongoDB if logged in
+      if (session) {
+        try {
+          const saveRes = await fetch('/api/user/cvs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formData, template: formData.template, id: cvId })
+          })
+          if (saveRes.ok) {
+            const saveData = await saveRes.json()
+            setCvId(saveData._id)
+            setSavedCV(true)
+          }
+        } catch (e) { console.error('Auto-save CV failed') }
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -143,13 +187,46 @@ export default function CvBuilderPage() {
     }
   }
 
+  const handleSaveCV = async () => {
+    if (!session) {
+      alert("Veuillez vous connecter pour sauvegarder votre CV.")
+      return
+    }
+    try {
+      const res = await fetch('/api/user/cvs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formData, template: formData.template, id: cvId })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCvId(data._id)
+        setSavedCV(true)
+      }
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde du CV')
+    }
+  }
+
   // ── PREVIEW MODE ──
   if (showPreview && cvData) {
     return (
-      <div className="cv-builder">
-        <div className="page-head">
-          <h1>Aperçu du CV</h1>
-          <p>Votre CV a été enrichi par l&apos;IA — Vérifiez et téléchargez</p>
+      <div className="cv-builder" style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+        <div className="page-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Aperçu du CV</h1>
+            <p>Votre CV a été enrichi par l&apos;IA — Vérifiez et téléchargez</p>
+          </div>
+          {session && (
+            <button 
+              onClick={handleSaveCV} 
+              className={`save-floating-btn ${savedCV ? 'saved' : ''}`}
+              style={{ position: 'static' }}
+            >
+              {savedCV ? <CheckCircle2 size={16} /> : <Save size={16} />}
+              {savedCV ? 'Sauvegardé' : 'Sauvegarder dans mon profil'}
+            </button>
+          )}
         </div>
         <div className="cv-preview-actions">
           <button className="cv-action-btn cv-action-primary" onClick={downloadPDF}><Download size={14} /> Télécharger PDF</button>

@@ -1,10 +1,12 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
   TrendingUp, BarChart3, Brain, Globe2, Database, Cpu,
   ArrowRight, ChevronRight, Activity, Users, Newspaper,
-  GitBranch, Target, Layers, Zap, GraduationCap, Shield
+  GitBranch, Target, Layers, Zap, GraduationCap, Shield,
+  Compass, FileText, MessageCircle, Bot, Sparkles, Briefcase
 } from 'lucide-react'
 
 /* ── Animated counter hook ─────────────────────────────── */
@@ -58,6 +60,7 @@ function Section({ children, className = '', id, delay = 0 }) {
 }
 
 export default function Accueil() {
+  const { data: session } = useSession()
   const [heroRef, heroVisible] = useInView()
   const evts = useCounter(2470, 2200, 0, heroVisible)
   const pays = useCounter(50, 1800, 0, heroVisible)
@@ -72,16 +75,30 @@ export default function Accueil() {
         <div className="landing-nav-inner">
           <div className="landing-logo">
             <div className="landing-logo-icon"><Activity size={16} /></div>
-            <span>IA Travail</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ lineHeight: '1', fontSize: '1.2rem', fontWeight: 700 }}>Jobly</span>
+              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.8)', marginTop: '2px' }}>Prédiction intelligente</span>
+            </div>
           </div>
           <div className="landing-nav-links">
             <a href="#problematique">Problématique</a>
-            <a href="#solution">Solution</a>
+            <a href="#fonctionnalites">Fonctionnalités</a>
             <a href="#modele">Modèle</a>
             <a href="#sources">Sources</a>
-            <Link href="/dashboard" className="landing-nav-cta">
-              Tableau de Bord <ArrowRight size={14} />
-            </Link>
+            {session ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: '#fff' }}>
+                  Bonjour {session.user.name.split(' ')[0]} !
+                </span>
+                <Link href="/dashboard" className="landing-nav-cta">
+                  Accéder au Dashboard <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : (
+              <Link href="/login" className="landing-nav-cta" style={{ marginLeft: '8px' }}>
+                Se connecter
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -96,7 +113,7 @@ export default function Accueil() {
 
         <div className={`hero-content ${heroVisible ? 'in-view' : ''}`}>
           <div className="hero-badge">
-            <Zap size={12} /> Projet de Fin d'Études — EST Salé 2025-2026
+            <Zap size={12} /> Jobly — Plateforme IA d'Analyse du Marché du Travail
           </div>
           <h1>
             Comprendre l'Impact de<br />
@@ -167,13 +184,13 @@ export default function Accueil() {
         </div>
       </Section>
 
-      {/* ════════════════ SOLUTION ════════════════ */}
-      <Section id="solution">
+      {/* ════════════════ FONCTIONNALITÉS ════════════════ */}
+      <Section id="fonctionnalites">
         <div className="section-inner">
-          <div className="section-tag">Notre Réponse</div>
-          <h2 className="section-title">La Plateforme IA Travail</h2>
+          <div className="section-tag">Nos Fonctionnalités</div>
+          <h2 className="section-title">Une Plateforme Complète</h2>
           <p className="section-desc">
-            Un tableau de bord analytique complet qui combine collecte de données en temps réel, intelligence artificielle et visualisation interactive.
+            7 modules intégrés combinant analyse de données, intelligence artificielle et outils pratiques pour comprendre et naviguer le marché du travail.
           </p>
           <div className="solution-layout">
             <div className="solution-image">
@@ -185,28 +202,49 @@ export default function Accueil() {
                 <div className="solution-feature-icon"><BarChart3 size={20} /></div>
                 <div>
                   <h4>Tableau de Bord Interactif</h4>
-                  <p>Visualisations en temps réel avec filtres géographiques et sectoriels. Graphiques de tendance, répartition par pays et par industrie.</p>
+                  <p>Visualisations en temps réel avec filtres géographiques et sectoriels. KPIs, graphiques de tendance, répartition par pays et par industrie.</p>
                 </div>
               </div>
               <div className="solution-feature">
                 <div className="solution-feature-icon"><TrendingUp size={20} /></div>
                 <div>
                   <h4>Prévisions Multi-Périodes</h4>
-                  <p>Projections trimestrielles et semestrielles avec intervalles de confiance, alimentées par un modèle XGBoost (Gradient Boosting) entraîné sur des données réelles.</p>
+                  <p>Projections trimestrielles et semestrielles avec intervalles de confiance, alimentées par un modèle XGBoost avec prédiction en cascade.</p>
                 </div>
               </div>
               <div className="solution-feature">
                 <div className="solution-feature-icon"><Newspaper size={20} /></div>
                 <div>
-                  <h4>Analyse de Sentiment NLP</h4>
-                  <p>Traitement du langage naturel (VADER) appliqué aux titres d'actualités pour mesurer le sentiment médiatique autour des licenciements.</p>
+                  <h4>Actualités & Tendances</h4>
+                  <p>Flux d'actualités en temps réel via NewsAPI et GNews, ticker de tendances animé, et données de chômage mondial de la Banque Mondiale.</p>
+                </div>
+              </div>
+              <div className="solution-feature">
+                <div className="solution-feature-icon"><Compass size={20} /></div>
+                <div>
+                  <h4>Recommandation Carrière IA</h4>
+                  <p>Formulaire multi-étapes intelligent : profil, compétences et préférences → l'IA recommande des secteurs, domaines, pays porteurs et des offres d'emploi réelles via Adzuna.</p>
+                </div>
+              </div>
+              <div className="solution-feature">
+                <div className="solution-feature-icon"><FileText size={20} /></div>
+                <div>
+                  <h4>CV Builder Intelligent</h4>
+                  <p>Création de CV en 5 étapes avec enrichissement par l'IA (Gemini). 3 templates professionnels (Moderne, Classique, Minimaliste) et export PDF/Word.</p>
+                </div>
+              </div>
+              <div className="solution-feature">
+                <div className="solution-feature-icon"><Bot size={20} /></div>
+                <div>
+                  <h4>Jobly — Agent IA Conversationnel</h4>
+                  <p>Chatbot spécialisé marché du travail avec 2 modèles au choix : Gemini Flash (rapide, cloud) ou Llama 3.1 (privé, hors-ligne). Upload de CV pour analyse personnalisée.</p>
                 </div>
               </div>
               <div className="solution-feature">
                 <div className="solution-feature-icon"><Globe2 size={20} /></div>
                 <div>
                   <h4>Couverture Mondiale</h4>
-                  <p>Données couvrant 50+ pays, 15+ secteurs d'industrie, avec des indicateurs macro-économiques de la Réserve Fédérale et la Banque Mondiale.</p>
+                  <p>50+ pays, 15+ secteurs, indicateurs macro de la Réserve Fédérale, Banque Mondiale, et analyse de sentiment NLP (VADER) sur les médias.</p>
                 </div>
               </div>
             </div>
@@ -534,9 +572,9 @@ export default function Accueil() {
       <Section id="sources" className="section-dark">
         <div className="section-inner">
           <div className="section-tag">Transparence</div>
-          <h2 className="section-title">Sources de Données</h2>
+          <h2 className="section-title">Sources de Données & APIs</h2>
           <p className="section-desc">
-            Toutes les données proviennent de sources publiques et vérifiables, collectées et nettoyées de manière automatisée.
+            La plateforme s'appuie sur 8 sources de données et APIs, combinant données publiques, APIs d'actualités et modèles d'IA générative.
           </p>
           <div className="sources-grid">
             <div className="source-card">
@@ -565,7 +603,7 @@ export default function Accueil() {
               <div className="source-icon green"><Database size={24} /></div>
               <div className="source-content">
                 <h4>Banque Mondiale</h4>
-                <p>Indicateurs globaux du travail pour 19 pays : taux de chômage, chômage des jeunes, ratio emploi/population. Données annuelles historiques.</p>
+                <p>Indicateurs globaux du travail pour 19 pays : taux de chômage, chômage des jeunes, ratio emploi/population. Données annuelles et en temps réel.</p>
                 <div className="source-meta">
                   <span className="source-tag">114 enregistrements</span>
                   <span className="source-tag">19 pays</span>
@@ -575,11 +613,44 @@ export default function Accueil() {
             <div className="source-card">
               <div className="source-icon purple"><Newspaper size={24} /></div>
               <div className="source-content">
-                <h4>NewsAPI</h4>
-                <p>Archive d'actualités mondiales avec scores de sentiment VADER. Classification automatique des articles liés aux licenciements et à l'embauche.</p>
+                <h4>NewsAPI & GNews</h4>
+                <p>Actualités du marché du travail en temps réel via deux APIs complémentaires. Sentiment NLP (VADER) et ticker de tendances animé.</p>
                 <div className="source-meta">
-                  <span className="source-tag">306 articles</span>
+                  <span className="source-tag">Temps réel</span>
                   <span className="source-tag">Sentiment NLP</span>
+                </div>
+              </div>
+            </div>
+            <div className="source-card">
+              <div className="source-icon blue"><Sparkles size={24} /></div>
+              <div className="source-content">
+                <h4>Google Gemini API</h4>
+                <p>IA générative pour les recommandations de carrière personnalisées, l'enrichissement intelligent des CV et l'agent conversationnel Jobly.</p>
+                <div className="source-meta">
+                  <span className="source-tag">Gemini Flash</span>
+                  <span className="source-tag">IA Générative</span>
+                </div>
+              </div>
+            </div>
+            <div className="source-card">
+              <div className="source-icon green"><Cpu size={24} /></div>
+              <div className="source-content">
+                <h4>Ollama — Llama 3.1</h4>
+                <p>Modèle de langage local (LLM) pour un usage privé et hors-ligne. Alternative confidentielle à Gemini pour l'agent Jobly.</p>
+                <div className="source-meta">
+                  <span className="source-tag">Local / Privé</span>
+                  <span className="source-tag">Hors-ligne</span>
+                </div>
+              </div>
+            </div>
+            <div className="source-card">
+              <div className="source-icon orange"><Briefcase size={24} /></div>
+              <div className="source-content">
+                <h4>Adzuna — Offres d'Emploi</h4>
+                <p>API d'offres d'emploi réelles intégrée au module de recommandation. Recherche ciblée par secteur, localisation et compétences.</p>
+                <div className="source-meta">
+                  <span className="source-tag">Offres réelles</span>
+                  <span className="source-tag">Multi-pays</span>
                 </div>
               </div>
             </div>
@@ -623,15 +694,16 @@ export default function Accueil() {
                   <span>scikit-learn</span><span>SHAP</span><span>Pandas</span>
                   <span>NumPy</span><span>Playwright</span>
                   <span>Next.js</span><span>React</span><span>Recharts</span>
-                  <span>VADER NLP</span>
+                  <span>VADER NLP</span><span>Gemini API</span><span>Ollama</span>
+                  <span>html2pdf</span><span>Adzuna API</span>
                 </div>
               </div>
             </div>
 
             <div className="cta-card">
               <div className="cta-glow" />
-              <h3>Prêt à Explorer ?</h3>
-              <p>Découvrez les données en temps réel et les prévisions IA de la plateforme.</p>
+              <h3>Prêt à anticiper le marché ?</h3>
+              <p>Découvrez toutes les fonctionnalités de la plateforme Jobly.</p>
               <div className="cta-buttons">
                 <Link href="/dashboard" className="cta-btn primary">
                   <BarChart3 size={18} />
@@ -643,6 +715,21 @@ export default function Accueil() {
                   Prévisions IA
                   <ArrowRight size={16} />
                 </Link>
+                <Link href="/recommandation" className="cta-btn secondary">
+                  <Compass size={18} />
+                  Recommandation
+                  <ArrowRight size={16} />
+                </Link>
+                <Link href="/cv-builder" className="cta-btn secondary">
+                  <FileText size={18} />
+                  CV Builder
+                  <ArrowRight size={16} />
+                </Link>
+                <Link href="/jobly" className="cta-btn secondary">
+                  <Bot size={18} />
+                  Jobly Agent
+                  <ArrowRight size={16} />
+                </Link>
               </div>
             </div>
           </div>
@@ -652,9 +739,12 @@ export default function Accueil() {
       {/* ════════════════ FOOTER ════════════════ */}
       <footer className="landing-footer">
         <div className="footer-inner">
-          <div className="footer-brand">
-            <div className="landing-logo-icon"><Activity size={14} /></div>
-            <span>IA Travail</span>
+          <div className="footer-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Activity size={20} className="footer-logo-icon" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ lineHeight: '1', fontSize: '1.2rem', fontWeight: 700 }}>Jobly</span>
+              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>Prédiction intelligente</span>
+            </div>
           </div>
           <p>© 2025-2026 ILYASS LYOUAJ — Projet de Fin d'Études, EST Salé, BDIA</p>
         </div>

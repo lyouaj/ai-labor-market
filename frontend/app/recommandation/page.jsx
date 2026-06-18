@@ -1,10 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Mail, GraduationCap, Calendar, Tag, Briefcase, Languages,
   Clock, MapPin, Building2, ChevronRight, ChevronLeft,
   Sparkles, Globe2, BookOpen, Lightbulb, ExternalLink,
-  AlertCircle, Loader2, Send, CheckCircle2, X
+  AlertCircle, Loader2, Send, CheckCircle2, X, Save, Bookmark
 } from 'lucide-react'
 
 /* ── Constants ──────────────────────────────────────── */
@@ -87,24 +88,40 @@ function TagInput({ tags, setTags, placeholder, suggestions }) {
 
 /* ── Main Page ──────────────────────────────────────── */
 export default function RecommandationPage() {
+  const { data: session } = useSession()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
+  const [savedReco, setSavedReco] = useState(false)
+  const [savedJobs, setSavedJobs] = useState({})
 
   // Form state
   const [form, setForm] = useState({
-    email: '',
-    niveau: '',
-    diplome: '',
-    anneeObtention: '',
-    competences: [],
-    experience: '',
-    langues: [],
-    disponibilite: '',
-    typeTravail: '',
-    paysCible: '',
+    email: '', niveau: '', diplome: '', anneeObtention: '',
+    competences: [], experience: '', langues: [],
+    disponibilite: '', typeTravail: '', paysCible: '',
   })
+  
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Hydrate from sessionStorage AFTER first render to avoid mismatch
+  useEffect(() => {
+    setIsMounted(true)
+    const sStep = sessionStorage.getItem('reco_step')
+    if (sStep) setStep(Number(sStep))
+    
+    const sResult = sessionStorage.getItem('reco_result')
+    if (sResult) setResult(JSON.parse(sResult))
+    
+    const sForm = sessionStorage.getItem('reco_form')
+    if (sForm) setForm(JSON.parse(sForm))
+  }, [])
+
+  // Persist state to sessionStorage
+  useEffect(() => { if (isMounted) sessionStorage.setItem('reco_form', JSON.stringify(form)) }, [form, isMounted])
+  useEffect(() => { if (isMounted) sessionStorage.setItem('reco_step', String(step)) }, [step, isMounted])
+  useEffect(() => { if (isMounted && result) sessionStorage.setItem('reco_result', JSON.stringify(result)) }, [result, isMounted])
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
@@ -138,6 +155,40 @@ export default function RecommandationPage() {
       }
 
       setResult(data)
+      setSavedReco(false)
+      // Auto-save to MongoDB if logged in
+      if (session) {
+        try {
+          await fetch('/api/user/recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formData: form, results: data })
+          })
+          setSavedReco(true)
+          
+          // Auto-save all recommended jobs to savedjobs collection
+          if (data.offres && Array.isArray(data.offres)) {
+            await Promise.all(data.offres.map(o => 
+              fetch('/api/user/saved-jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  titre: o.titre.replace(/<[^>]*>/g, ''),
+                  entreprise: o.entreprise,
+                  pays: o.lieu || 'Non précisé',
+                  lien: o.url,
+                  salaire: o.salaire,
+                  source: 'Adzuna'
+                })
+              })
+            ))
+            // Update UI state to show all as saved
+            const newSavedJobs = {}
+            data.offres.forEach((_, i) => newSavedJobs[i] = true)
+            setSavedJobs(newSavedJobs)
+          }
+        } catch (e) { console.error('Auto-save failed') }
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -149,9 +200,53 @@ export default function RecommandationPage() {
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i)
 
+  const handleSaveRecommendation = async () => {
+    if (!session) {
+      alert("Veuillez vous connecter pour sauvegarder une recommandation.")
+      return
+    }
+    try {
+      const res = await fetch('/api/user/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formData: form, results: result })
+      })
+      if (res.ok) setSavedReco(true)
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde de la recommandation')
+    }
+  }
+
+  const handleSaveJob = async (e, o, index) => {
+    e.preventDefault() // Prevent navigation since it's an <a> tag
+    if (!session) {
+      alert("Veuillez vous connecter pour sauvegarder une offre.")
+      return
+    }
+    try {
+      const res = await fetch('/api/user/saved-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titre: o.titre.replace(/<[^>]*>/g, ''),
+          entreprise: o.entreprise,
+          pays: o.lieu || 'Non précisé',
+          lien: o.url,
+          salaire: o.salaire,
+          source: 'Adzuna'
+        })
+      })
+      if (res.ok) {
+        setSavedJobs(prev => ({ ...prev, [index]: true }))
+      }
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde de l\'offre')
+    }
+  }
+
   return (
     <>
-      <div className="page-head">
+      <div className="page-header">
         <h1>Recommandation Carrière</h1>
         <p>Obtenez des recommandations personnalisées basées sur votre profil · Alimenté par l'IA</p>
       </div>
@@ -355,9 +450,22 @@ export default function RecommandationPage() {
       {/* ── Results ───────────────────────────────── */}
       {result && (
         <div className="reco-results fade-in">
-          <div className="reco-results-header">
-            <Sparkles size={18} />
-            <h2>Vos Recommandations Personnalisées</h2>
+          <div className="reco-results-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Sparkles size={18} />
+              <h2>Vos Recommandations Personnalisées</h2>
+            </div>
+            {session && (
+              <button 
+                onClick={handleSaveRecommendation} 
+                disabled={savedReco}
+                className={`save-floating-btn ${savedReco ? 'saved' : ''}`}
+                style={{ position: 'static', opacity: savedReco ? 0.7 : 1, cursor: savedReco ? 'default' : 'pointer' }}
+              >
+                {savedReco ? <CheckCircle2 size={16} /> : <Save size={16} />}
+                {savedReco ? 'Sauvegardée' : 'Sauvegarder manuellement'}
+              </button>
+            )}
           </div>
 
           <div className="reco-results-grid">
@@ -453,6 +561,28 @@ export default function RecommandationPage() {
                     )}
                     {o.date && (
                       <div className="reco-offre-date">{o.date}</div>
+                    )}
+                    {session && (
+                      <button 
+                        onClick={(e) => handleSaveJob(e, o, i)}
+                        style={{
+                          marginTop: '0.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          background: savedJobs[i] ? 'var(--success-dim)' : 'var(--surface-alt)',
+                          color: savedJobs[i] ? 'var(--success)' : 'var(--text-secondary)',
+                          border: 'none',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          width: 'max-content'
+                        }}
+                      >
+                        {savedJobs[i] ? <CheckCircle2 size={12} /> : <Bookmark size={12} />}
+                        {savedJobs[i] ? 'Sauvegardée' : 'Sauvegarder'}
+                      </button>
                     )}
                   </a>
                 ))}

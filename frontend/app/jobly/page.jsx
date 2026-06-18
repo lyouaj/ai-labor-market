@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Bot, Send, Paperclip, X, Sparkles, ArrowRight, Globe, Cpu } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Bot, Send, Paperclip, X, Sparkles, ArrowRight, Globe, Cpu, Save, CheckCircle2 } from 'lucide-react'
 
 const SUGGESTIONS = [
   'Quels secteurs licencient le plus en 2026 ?',
@@ -11,11 +12,13 @@ const SUGGESTIONS = [
 ]
 
 export default function JoblyPage() {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
   const [selectedModel, setSelectedModel] = useState('gemini')
+  const [savedChat, setSavedChat] = useState(false)
   const chatEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const inputRef = useRef(null)
@@ -45,6 +48,7 @@ export default function JoblyPage() {
     setMessages(newMessages)
     setInput('')
     setIsLoading(true)
+    setSavedChat(false) // Reset save state on new message
 
     const body = {
       messages: newMessages.map(m => ({ role: m.role, content: m.content })),
@@ -140,18 +144,37 @@ export default function JoblyPage() {
     }
   }
 
+  const handleSaveChat = async () => {
+    if (!session) {
+      alert("Veuillez vous connecter pour sauvegarder cette conversation.")
+      return
+    }
+    try {
+      const res = await fetch('/api/user/jobly-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: selectedModel, messages })
+      })
+      if (res.ok) setSavedChat(true)
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde de la conversation')
+    }
+  }
+
   const showWelcome = messages.length === 0
 
   return (
     <div className="jobly-page">
       <div className="jobly-page-header">
-        <div className="jobly-page-header-left">
-          <div className="jobly-avatar-lg">
-            <Bot size={24} />
-          </div>
-          <div>
-            <h1>Jobly</h1>
-            <p>Votre assistant IA spécialisé dans l&apos;analyse du marché du travail</p>
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="jobly-page-header-left">
+            <div className="jobly-avatar-lg">
+              <Bot size={24} />
+            </div>
+            <div>
+              <h1>Jobly Agent</h1>
+              <p>Votre assistant IA spécialisé dans le marché du travail.</p>
+            </div>
           </div>
         </div>
         <div className="jobly-page-header-badge">
@@ -275,6 +298,15 @@ export default function JoblyPage() {
             onKeyDown={handleKeyDown}
             disabled={isLoading}
           />
+          <button
+            className="jobly-upload-btn"
+            onClick={handleSaveChat}
+            disabled={savedChat || isLoading || messages.length === 0}
+            title={savedChat ? "Conversation sauvegardée" : "Sauvegarder la conversation"}
+            style={{ color: savedChat ? 'var(--success)' : 'inherit', marginLeft: 'auto' }}
+          >
+            {savedChat ? <CheckCircle2 size={16} /> : <Save size={16} />}
+          </button>
           <button
             className="jobly-send-btn"
             onClick={() => handleSend()}

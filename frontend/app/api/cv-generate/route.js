@@ -59,6 +59,7 @@ export async function POST(request) {
           model: 'llama3.1',
           prompt,
           stream: false,
+          format: 'json',
           options: { temperature: 0.7 },
         }),
         signal: controller.signal,

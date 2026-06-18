@@ -1,10 +1,11 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Brain, BarChart3, TrendingUp, TrendingDown, AlertTriangle,
   Newspaper, Users, Activity, ChevronRight, Info, CalendarRange,
   ShieldCheck, Factory, Maximize2, X, ZoomIn, ChevronDown,
-  BarChart2
+  BarChart2, Save, CheckCircle2
 } from 'lucide-react'
 import {
   Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -313,6 +314,7 @@ function FullscreenContent({ historicalBars, forecastLine, forecastData, hasCIBa
 /* ── Main Page ───────────────────────────────────── */
 /* ═══════════════════════════════════════════════════ */
 export default function PredictionPage() {
+  const { data: session } = useSession()
   const [countries, setCountries]         = useState([])
   const [selectedCountry, setSelectedCountry] = useState('')
   const [industries, setIndustries]       = useState([])
@@ -325,10 +327,30 @@ export default function PredictionPage() {
   const [loadingCtx, setLoadingCtx]       = useState(false)
   const [activeIndicator, setActiveIndicator] = useState(null)  // for modal
   const [fullscreen, setFullscreen]       = useState(false)
+  const [savedPrediction, setSavedPrediction] = useState(false)
 
   useEffect(() => {
     fetchFilters().then(d => setCountries(d.countries || [])).catch(console.error)
   }, [])
+
+  // Load last saved prediction automatically
+  useEffect(() => {
+    if (session) {
+      fetch('/api/user/predictions', { cache: 'no-store' })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            const last = data[0]
+            setSelectedCountry(last.pays || '')
+            setSelectedIndustry(last.secteur || '')
+            setPeriod(last.periode || 'quarterly')
+            setForecast(last.results)
+            setSavedPrediction(true)
+          }
+        })
+        .catch(console.error)
+    }
+  }, [session])
 
   const handleCountryChange = async (e) => {
     const c = e.target.value
@@ -360,10 +382,33 @@ export default function PredictionPage() {
   const handleForecast = async () => {
     if (!features || !selectedCountry) return
     setLoading(true)
+    setSavedPrediction(false)
     try {
       const result = await postForecast(selectedCountry, period, selectedIndustry || null, 4)
       setForecast(result)
     } catch (err) { console.error(err) } finally { setLoading(false) }
+  }
+
+  const handleSavePrediction = async () => {
+    if (!session) {
+      alert("Veuillez vous connecter pour sauvegarder cette prévision.")
+      return
+    }
+    try {
+      const res = await fetch('/api/user/predictions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pays: selectedCountry,
+          secteur: selectedIndustry,
+          periode: period,
+          results: forecast
+        })
+      })
+      if (res.ok) setSavedPrediction(true)
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde de la prévision')
+    }
   }
 
   /* ─── Historical monthly data ───────────────────── */
@@ -530,10 +575,22 @@ export default function PredictionPage() {
   /* ══════════════════════ JSX ═══════════════════════ */
   return (
     <>
-      {/* ── Page Header ─────────────────────────────── */}
-      <div className="page-head">
-        <h1>Prévision des Licenciements</h1>
-        <p>Modèle prédictif XGBoost multi-périodes — sélectionnez un pays, un secteur et un horizon</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>Prévisions & Indicateurs</h1>
+          <p>Analysez les tendances futures du marché du travail</p>
+        </div>
+        {session && forecast && (
+          <button 
+            onClick={handleSavePrediction} 
+            disabled={savedPrediction}
+            className={`save-floating-btn ${savedPrediction ? 'saved' : ''}`}
+            style={{ position: 'static', opacity: savedPrediction ? 0.7 : 1, cursor: savedPrediction ? 'default' : 'pointer' }}
+          >
+            {savedPrediction ? <CheckCircle2 size={16} /> : <Save size={16} />}
+            {savedPrediction ? 'Sauvegardée' : 'Sauvegarder manuellement'}
+          </button>
+        )}
       </div>
 
       <div className="fc-layout">

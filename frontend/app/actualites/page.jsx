@@ -45,7 +45,7 @@ export default function Actualites() {
   if (loading) return <div className="page-loader"><div className="spinner" /></div>
 
   return (
-    <>
+    <div style={{ overflowX: 'hidden' }}>
       <div className="page-head">
         <h1>Actualités & Tendances</h1>
         <p>Toutes les informations en temps réel sur le marché du travail</p>
@@ -71,46 +71,127 @@ export default function Actualites() {
         </div>
       )}
 
-      <div className="chart-grid">
-        {/* Market News Cards */}
-        <div className="panel span-8">
-          <div className="panel-head">
-            <span className="panel-title" style={{display:'flex', alignItems:'center', gap:6}}><Newspaper size={16}/> Actualités du Marché</span>
-            <span className="panel-badge">NewsAPI</span>
-          </div>
-          <div style={{ height: 600, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingRight: 8 }}>
-            {news.map((n, i) => (
-              <a key={i} href={n.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 16, textDecoration: 'none', color: 'inherit', border: '1px solid #eee', borderRadius: 12, padding: 12, transition: 'all 0.2s', backgroundColor: '#fff' }} className="news-card">
-                {n.urlToImage && <img src={n.urlToImage} alt="" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, backgroundColor: '#f0f0f0' }} />}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.title}</div>
-                  <div style={{ fontSize: 13, color: '#525252', marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.description}</div>
-                  <div style={{ fontSize: 11, color: '#888', fontWeight: 500 }}>{n.source} • {new Date(n.date).toLocaleDateString()}</div>
-                </div>
-              </a>
-            ))}
-          </div>
-          <style dangerouslySetInnerHTML={{__html: `.news-card:hover { border-color: #2563eb !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }`}} />
+      {/* ── Actualités du Marché ── */}
+      <div className="panel" style={{ marginBottom: 24 }}>
+        <div className="panel-head">
+          <span className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Newspaper size={18} />
+            Actualités du Marché
+          </span>
+          <span className="panel-badge">NewsAPI</span>
         </div>
-
-        {/* World Economy (Unemployment) */}
-        <div className="panel span-4">
-          <div className="panel-head"><span className="panel-title">Chômage Mondial</span><span className="panel-badge">Banque Mondiale</span></div>
-          <div style={{ height: 600, overflowY: 'auto', paddingRight: 8 }}>
-            <table className="data-table" style={{ margin: 0 }}>
-              <thead><tr><th>Pays</th><th style={{textAlign:'right'}}>Taux (%)</th></tr></thead>
-              <tbody>
-                {worldEconomy.map((we, i) => (
-                  <tr key={i}>
-                    <td>{we.country} <span style={{fontSize:9, color:'#888'}}>({we.year})</span></td>
-                    <td style={{textAlign:'right', fontWeight:600}}>{we.unemployment_rate}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, overflowX: 'hidden' }}>
+          {news.map((n, i) => (
+            <a
+              key={i}
+              href={n.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="news-card"
+              style={{
+                display: 'flex',
+                gap: 16,
+                textDecoration: 'none',
+                color: 'inherit',
+                border: '1px solid #e5e5e5',
+                borderRadius: 12,
+                padding: 14,
+                transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
+                backgroundColor: '#fff',
+                animation: `fadeIn 0.4s ease ${i * 0.04}s both`,
+              }}
+            >
+              {n.urlToImage && (
+                <img
+                  src={n.urlToImage}
+                  alt=""
+                  style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 10, backgroundColor: '#f0f0f0', flexShrink: 0 }}
+                />
+              )}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {n.title}
+                </div>
+                <div style={{ fontSize: 13, color: '#525252', marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {n.description}
+                </div>
+                <div style={{ fontSize: 11, color: '#888', fontWeight: 500 }}>
+                  {n.source} • {new Date(n.date).toLocaleDateString()}
+                </div>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
-    </>
+
+      {/* ── Chômage Mondial ── */}
+      <div className="panel">
+        <div className="panel-head">
+          <span className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            🌍 Chômage Mondial
+          </span>
+          <span className="panel-badge">Banque Mondiale</span>
+        </div>
+
+        {worldEconomy.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+            {worldEconomy.map((we, i) => {
+              const rate = parseFloat(we.unemployment_rate) || 0
+              const color = rate > 15 ? '#dc2626' : rate > 10 ? '#d97706' : rate > 5 ? '#2563eb' : '#16a34a'
+              const bgColor = rate > 15 ? 'rgba(220,38,38,0.06)' : rate > 10 ? 'rgba(217,119,6,0.06)' : rate > 5 ? 'rgba(37,99,235,0.06)' : 'rgba(22,163,74,0.06)'
+              return (
+                <div
+                  key={i}
+                  style={{
+                    border: '1px solid #e5e5e5',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    transition: 'all 0.2s cubic-bezier(.4,0,.2,1)',
+                    cursor: 'default',
+                    animation: `fadeIn 0.35s ease ${i * 0.03}s both`,
+                    background: '#fff',
+                  }}
+                  className="unemp-card"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>{we.country}</div>
+                      <div style={{ fontSize: 11, color: '#a3a3a3', fontWeight: 500 }}>{we.year}</div>
+                    </div>
+                    <div style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color,
+                      background: bgColor,
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      letterSpacing: '-0.5px',
+                    }}>
+                      {we.unemployment_rate}%
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${Math.min(rate * 2.5, 100)}%`,
+                        height: '100%',
+                        background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                        borderRadius: 4,
+                        transition: 'width 0.8s cubic-bezier(.4,0,.2,1)',
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .news-card:hover { border-color: #2563eb !important; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+        .unemp-card:hover { border-color: #d4d4d4 !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+      `}} />
+    </div>
   )
 }

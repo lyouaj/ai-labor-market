@@ -5,9 +5,9 @@ import JoblyChat from '@/components/JoblyChat'
 
 export default function LayoutShell({ children }) {
   const pathname = usePathname()
-  const isLanding = pathname === '/'
+  const noShell = pathname === '/' || pathname === '/login' || pathname === '/register'
   
-  if (isLanding) {
+  if (noShell) {
     return <>{children}</>
   }
 
