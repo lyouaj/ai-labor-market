@@ -4,8 +4,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
 
-const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat'
-const BACKEND_URL = 'http://127.0.0.1:8000/api'
+const OLLAMA_URL = process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434/api/chat'
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'
 
 const SYSTEM_PROMPT_BASE = `Tu es Jobly, un agent expert en marché du travail mondial.
 Tu analyses les licenciements, tendances d'emploi, secteurs porteurs et conseilles les utilisateurs sur leur carrière.
