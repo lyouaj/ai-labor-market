@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react'
 import {
   User, Briefcase, GraduationCap, Brain, Layout,
   Plus, Trash2, ChevronRight, ChevronLeft, Sparkles,
-  Download, FileText, RotateCcw, Edit3, X, Check, Save, CheckCircle2
+  Download, FileText, RotateCcw, Edit3, X, Check, Save, CheckCircle2,
+  Globe, Cpu
 } from 'lucide-react'
 
 const STEPS = [
@@ -33,6 +34,7 @@ export default function CvBuilderPage() {
     competencesTech: [], competencesSoft: [], langues: [{ ...EMPTY_LANGUE }], centresInteret: '',
     template: 'moderne',
   })
+  const [selectedModel, setSelectedModel] = useState('ollama-fast')
   const [tagInputTech, setTagInputTech] = useState('')
   const [tagInputSoft, setTagInputSoft] = useState('')
   const [cvData, setCvData] = useState(null)
@@ -45,27 +47,56 @@ export default function CvBuilderPage() {
 
   const [isMounted, setIsMounted] = useState(false)
 
-  // Hydrate from sessionStorage AFTER first render to avoid mismatch
+  // Hydrate from localStorage AFTER first render to avoid mismatch
   useEffect(() => {
     setIsMounted(true)
-    const sStep = sessionStorage.getItem('cv_step')
+    const sStep = localStorage.getItem('cv_step')
     if (sStep) setStep(Number(sStep))
     
-    const sFormData = sessionStorage.getItem('cv_formData')
+    const sFormData = localStorage.getItem('cv_formData')
     if (sFormData) setFormData(JSON.parse(sFormData))
+
+    const sModel = localStorage.getItem('cv_model')
+    if (sModel) setSelectedModel(sModel)
     
-    const sCvData = sessionStorage.getItem('cv_cvData')
+    const sCvData = localStorage.getItem('cv_cvData')
     if (sCvData) setCvData(JSON.parse(sCvData))
     
-    const sShowPreview = sessionStorage.getItem('cv_showPreview')
+    const sShowPreview = localStorage.getItem('cv_showPreview')
     if (sShowPreview) setShowPreview(sShowPreview === 'true')
   }, [])
 
-  // Persist state to sessionStorage
-  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_formData', JSON.stringify(formData)) }, [formData, isMounted])
-  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_step', String(step)) }, [step, isMounted])
-  useEffect(() => { if (isMounted && cvData) sessionStorage.setItem('cv_cvData', JSON.stringify(cvData)) }, [cvData, isMounted])
-  useEffect(() => { if (isMounted) sessionStorage.setItem('cv_showPreview', String(showPreview)) }, [showPreview, isMounted])
+  // Persist state to localStorage
+  useEffect(() => { if (isMounted) localStorage.setItem('cv_formData', JSON.stringify(formData)) }, [formData, isMounted])
+  useEffect(() => { if (isMounted) localStorage.setItem('cv_step', String(step)) }, [step, isMounted])
+  useEffect(() => { if (isMounted) localStorage.setItem('cv_model', selectedModel) }, [selectedModel, isMounted])
+  useEffect(() => { if (isMounted && cvData) localStorage.setItem('cv_cvData', JSON.stringify(cvData)) }, [cvData, isMounted])
+  useEffect(() => { if (isMounted) localStorage.setItem('cv_showPreview', String(showPreview)) }, [showPreview, isMounted])
+
+  // ── Reset all CV data ──
+  function resetAll() {
+    if (!confirm('Voulez-vous vraiment effacer toutes les donn\u00e9es du CV ?')) return
+    setStep(1)
+    setFormData({
+      prenom: '', nom: '', titre: '', email: '', telephone: '', ville: '', pays: '',
+      linkedin: '', github: '', siteWeb: '', photo: null, resume: '',
+      experiences: [{ ...EMPTY_EXP }],
+      formations: [{ ...EMPTY_FORMATION }],
+      competencesTech: [], competencesSoft: [], langues: [{ ...EMPTY_LANGUE }], centresInteret: '',
+      template: 'moderne',
+    })
+    setSelectedModel('ollama-fast')
+    setCvData(null)
+    setCvId(null)
+    setSavedCV(false)
+    setShowPreview(false)
+    setError('')
+    localStorage.removeItem('cv_step')
+    localStorage.removeItem('cv_formData')
+    localStorage.removeItem('cv_model')
+    localStorage.removeItem('cv_cvData')
+    localStorage.removeItem('cv_showPreview')
+  }
 
   // ── Field updaters ──
   const updateField = (field, value) => setFormData(p => ({ ...p, [field]: value }))
@@ -120,7 +151,7 @@ export default function CvBuilderPage() {
       const res = await fetch('/api/cv-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, model: selectedModel }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -250,9 +281,15 @@ export default function CvBuilderPage() {
   // ── FORM MODE ──
   return (
     <div className="cv-builder">
-      <div className="page-head">
-        <h1>CV Builder</h1>
-        <p>Créez un CV professionnel enrichi par l&apos;intelligence artificielle</p>
+      <div className="page-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>CV Builder</h1>
+          <p>Créez un CV professionnel enrichi par l&apos;intelligence artificielle</p>
+        </div>
+        <button className="cv-reset-btn" onClick={resetAll} title="Effacer toutes les données">
+          <RotateCcw size={14} />
+          Réinitialiser
+        </button>
       </div>
 
       {/* Stepper */}
@@ -444,6 +481,48 @@ export default function CvBuilderPage() {
                 </button>
               ))}
             </div>
+
+            {/* Model Selector */}
+            <div className="cv-model-selector">
+              <h3>Modèle IA</h3>
+              <div className="jobly-model-toggle">
+                <button
+                  className={`jobly-model-btn ${selectedModel === 'gemini' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('gemini')}
+                  disabled={isGenerating}
+                >
+                  <Globe size={14} />
+                  <span>Gemini Flash</span>
+                  <span className="jobly-model-badge jobly-model-badge-green">Rapide</span>
+                </button>
+                <button
+                  className={`jobly-model-btn ${selectedModel === 'ollama-fast' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('ollama-fast')}
+                  disabled={isGenerating}
+                >
+                  <Cpu size={14} />
+                  <span>Llama 3.2</span>
+                  <span className="jobly-model-badge jobly-model-badge-orange">⚡ Ultra-rapide</span>
+                </button>
+                <button
+                  className={`jobly-model-btn ${selectedModel === 'ollama' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('ollama')}
+                  disabled={isGenerating}
+                >
+                  <Cpu size={14} />
+                  <span>Llama 3.1</span>
+                  <span className="jobly-model-badge jobly-model-badge-blue">Privé</span>
+                </button>
+              </div>
+              <div className="jobly-model-desc" style={{ marginTop: '0.5rem' }}>
+                {selectedModel === 'gemini'
+                  ? 'Rapide · Nécessite internet'
+                  : selectedModel === 'ollama-fast'
+                  ? '⚡ Ultra-rapide · Local · 1.3GB'
+                  : 'Confidentiel · Fonctionne hors-ligne'}
+              </div>
+            </div>
+
             <button className="cv-generate-btn" onClick={generateCV} disabled={isGenerating || !formData.prenom || !formData.nom}>
               {isGenerating ? (<><div className="spinner-white" /> Génération en cours...</>) : (<><Sparkles size={16} /> Générer mon CV avec l&apos;IA</>)}
             </button>

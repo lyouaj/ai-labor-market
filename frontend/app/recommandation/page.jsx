@@ -5,7 +5,8 @@ import {
   Mail, GraduationCap, Calendar, Tag, Briefcase, Languages,
   Clock, MapPin, Building2, ChevronRight, ChevronLeft,
   Sparkles, Globe2, BookOpen, Lightbulb, ExternalLink,
-  AlertCircle, Loader2, Send, CheckCircle2, X, Save, Bookmark
+  AlertCircle, Loader2, Send, CheckCircle2, X, Save, Bookmark,
+  Globe, Cpu
 } from 'lucide-react'
 
 /* ── Constants ──────────────────────────────────────── */
@@ -95,6 +96,7 @@ export default function RecommandationPage() {
   const [result, setResult] = useState(null)
   const [savedReco, setSavedReco] = useState(false)
   const [savedJobs, setSavedJobs] = useState({})
+  const [selectedModel, setSelectedModel] = useState('ollama-fast')
 
   // Form state
   const [form, setForm] = useState({
@@ -145,7 +147,7 @@ export default function RecommandationPage() {
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, model: selectedModel }),
       })
 
       const data = await res.json()
@@ -399,6 +401,50 @@ export default function RecommandationPage() {
                   <option value="">Sélectionner</option>
                   {PAYS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
+              </div>
+            </div>
+
+            {/* AI Model Selector */}
+            <div className="reco-model-selector" style={{ marginTop: '1.5rem' }}>
+              <label className="reco-label" style={{ marginBottom: '0.75rem' }}><Cpu size={13} /> Modèle IA</label>
+              <div className="jobly-model-toggle">
+                <button
+                  type="button"
+                  className={`jobly-model-btn ${selectedModel === 'gemini' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('gemini')}
+                  disabled={loading}
+                >
+                  <Globe size={14} />
+                  <span>Gemini Flash</span>
+                  <span className="jobly-model-badge jobly-model-badge-green">Rapide</span>
+                </button>
+                <button
+                  type="button"
+                  className={`jobly-model-btn ${selectedModel === 'ollama-fast' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('ollama-fast')}
+                  disabled={loading}
+                >
+                  <Cpu size={14} />
+                  <span>Llama 3.2</span>
+                  <span className="jobly-model-badge jobly-model-badge-orange">⚡ Ultra-rapide</span>
+                </button>
+                <button
+                  type="button"
+                  className={`jobly-model-btn ${selectedModel === 'ollama' ? 'active' : ''}`}
+                  onClick={() => setSelectedModel('ollama')}
+                  disabled={loading}
+                >
+                  <Cpu size={14} />
+                  <span>Llama 3.1</span>
+                  <span className="jobly-model-badge jobly-model-badge-blue">Privé</span>
+                </button>
+              </div>
+              <div className="jobly-model-desc" style={{ marginTop: '0.5rem' }}>
+                {selectedModel === 'gemini'
+                  ? 'Rapide · Nécessite internet'
+                  : selectedModel === 'ollama-fast'
+                  ? '⚡ Ultra-rapide · Local · 1.3GB'
+                  : 'Confidentiel · Fonctionne hors-ligne'}
               </div>
             </div>
           </div>

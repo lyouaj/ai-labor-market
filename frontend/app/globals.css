@@ -4298,6 +4298,53 @@ a { text-decoration: none; color: inherit; }
   color: #2563eb;
 }
 
+.jobly-model-badge-orange {
+  background: rgba(234, 88, 12, 0.1);
+  color: #ea580c;
+}
+
+/* ── CV Model Selector ─────────────────────────────── */
+.cv-model-selector {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.cv-model-selector h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+/* ── CV Reset Button ───────────────────────────────── */
+.cv-reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  white-space: nowrap;
+}
+
+.cv-reset-btn:hover {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.cv-reset-btn:active {
+  transform: scale(0.97);
+}
+
 /* ── Float Compact Model Bar ────────────────────────── */
 .jobly-model-bar-compact {
   display: flex;

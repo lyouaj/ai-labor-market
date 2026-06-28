@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
@@ -41,93 +42,135 @@ IMPORTANT:
 - Retourne UNIQUEMENT le JSON, rien d'autre`
 }
 
+/* ── Parse AI JSON response ──────────────────────────── */
+function parseAIResponse(raw) {
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) {
+    return null
+  }
+  try {
+    return JSON.parse(jsonMatch[0])
+  } catch {
+    return null
+  }
+}
+
+/* ── Enrich formData with AI result ──────────────────── */
+function enrichFormData(formData, aiResult) {
+  return {
+    ...formData,
+    resume_ameliore: aiResult.resume || formData.resume,
+    phrase_accroche: aiResult.phrase_accroche || '',
+    competences_suggerees: aiResult.competences_suggerees || [],
+    experiences: (formData.experiences || []).map((exp, i) => {
+      const aiExp = (aiResult.experiences || []).find(e => e.index === i)
+      return {
+        ...exp,
+        description_amelioree: aiExp?.description_amelioree || [],
+      }
+    }),
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Gemini handler for CV generation
+   ══════════════════════════════════════════════════════ */
+async function handleGemini(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey || apiKey === 'votre_clé_gemini_ici') {
+    throw new Error('Clé API Gemini non configurée. Ajoutez GEMINI_API_KEY dans .env.local.')
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+  })
+
+  const result = await model.generateContent(prompt)
+  const response = await result.response
+  return response.text()
+}
+
+/* ══════════════════════════════════════════════════════
+   Ollama handler for CV generation
+   ══════════════════════════════════════════════════════ */
+async function handleOllama(prompt, modelName = 'llama3.1') {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 300000)
+
+  try {
+    const res = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelName,
+        prompt,
+        stream: false,
+        format: 'json',
+        options: { temperature: 0.7 },
+      }),
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      throw new Error(`Ollama erreur ${res.status}: ${errText}`)
+    }
+
+    const data = await res.json()
+    return data.response || ''
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Ollama a mis trop de temps à répondre (timeout 5min).')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   POST handler
+   ══════════════════════════════════════════════════════ */
 export async function POST(request) {
   try {
-    const formData = await request.json()
+    const body = await request.json()
+    const { model = 'ollama-fast', ...formData } = body
 
     const prompt = buildPrompt(formData)
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 300000)
-
-    let ollamaRes
+    let raw
     try {
-      ollamaRes = await fetch(OLLAMA_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3.1',
-          prompt,
-          stream: false,
-          format: 'json',
-          options: { temperature: 0.7 },
-        }),
-        signal: controller.signal,
-      })
-    } catch (err) {
-      clearTimeout(timeout)
-      if (err.name === 'AbortError') {
-        return NextResponse.json(
-          { error: 'Ollama a mis trop de temps à répondre (timeout 5min).' },
-          { status: 504 }
-        )
+      if (model === 'gemini') {
+        raw = await handleGemini(prompt)
+      } else if (model === 'ollama-fast') {
+        raw = await handleOllama(prompt, 'llama3.2:1b')
+      } else {
+        // model === 'ollama' (Llama 3.1)
+        raw = await handleOllama(prompt, 'llama3.1')
       }
+    } catch (err) {
+      const isConnection = err.message?.includes('contacter') || err.message?.includes('ECONNREFUSED')
       return NextResponse.json(
-        { error: 'Impossible de contacter Ollama. Vérifiez qu\'il est lancé sur localhost:11434.' },
-        { status: 503 }
+        { error: err.message || 'Impossible de contacter le service IA.' },
+        { status: isConnection ? 503 : 502 }
       )
     }
 
-    clearTimeout(timeout)
-
-    if (!ollamaRes.ok) {
-      const errText = await ollamaRes.text().catch(() => '')
+    // Parse AI response
+    const aiResult = parseAIResponse(raw)
+    if (!aiResult) {
+      console.error('[CV Generate] Raw:', (raw || '').substring(0, 500))
       return NextResponse.json(
-        { error: `Ollama erreur ${ollamaRes.status}: ${errText}` },
-        { status: 502 }
-      )
-    }
-
-    const data = await ollamaRes.json()
-    const raw = data.response || ''
-
-    // Extract JSON from response
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error('[CV Generate] Raw:', raw.substring(0, 500))
-      return NextResponse.json(
-        { error: 'Impossible d\'extraire le JSON de la réponse IA.' },
-        { status: 500 }
-      )
-    }
-
-    let aiResult
-    try {
-      aiResult = JSON.parse(jsonMatch[0])
-    } catch {
-      console.error('[CV Generate] JSON parse failed:', jsonMatch[0].substring(0, 300))
-      return NextResponse.json(
-        { error: 'La réponse IA n\'est pas un JSON valide. Réessayez.' },
+        { error: "Impossible d'extraire le JSON de la réponse IA. Réessayez." },
         { status: 500 }
       )
     }
 
     // Merge AI enhancements with original data
-    const enriched = {
-      ...formData,
-      resume_ameliore: aiResult.resume || formData.resume,
-      phrase_accroche: aiResult.phrase_accroche || '',
-      competences_suggerees: aiResult.competences_suggerees || [],
-      experiences: (formData.experiences || []).map((exp, i) => {
-        const aiExp = (aiResult.experiences || []).find(e => e.index === i)
-        return {
-          ...exp,
-          description_amelioree: aiExp?.description_amelioree || [],
-        }
-      }),
-    }
+    const enriched = enrichFormData(formData, aiResult)
 
-    return NextResponse.json(enriched)
+    return NextResponse.json({ cv: enriched })
   } catch (err) {
     console.error('[CV Generate] Error:', err)
     return NextResponse.json(

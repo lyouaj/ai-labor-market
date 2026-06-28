@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 /* ── Country code mapping for Adzuna ────────────────── */
 const COUNTRY_CODES = {
@@ -11,7 +12,7 @@ const COUNTRY_CODES = {
   'Afrique du Sud': 'za', 'Nouvelle-Zélande': 'nz',
 }
 
-/* ── Build prompt for Ollama ────────────────────────── */
+/* ── Build prompt for AI ───────────────────────────── */
 function buildPrompt(profile) {
   return `Tu es un conseiller carrière expert en marché du travail international.
 
@@ -38,8 +39,38 @@ Analyse ce profil et retourne UNIQUEMENT un JSON valide (sans texte autour) avec
 IMPORTANT : Retourne UNIQUEMENT le JSON, sans markdown, sans explication.`
 }
 
-/* ── Call Ollama ─────────────────────────────────────── */
-async function callOllama(prompt) {
+/* ══════════════════════════════════════════════════════
+   Gemini handler for recommendations
+   ══════════════════════════════════════════════════════ */
+async function callGemini(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey || apiKey === 'votre_clé_gemini_ici') {
+    throw new Error('Clé API Gemini non configurée. Ajoutez GEMINI_API_KEY dans .env.local.')
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+  })
+
+  const result = await model.generateContent(prompt)
+  const response = await result.response
+  const raw = response.text()
+
+  // Extract JSON from response
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) {
+    console.error('Gemini raw response:', raw.substring(0, 500))
+    throw new Error("Impossible d'extraire le JSON de la réponse Gemini")
+  }
+
+  return JSON.parse(jsonMatch[0])
+}
+
+/* ══════════════════════════════════════════════════════
+   Ollama handler for recommendations
+   ══════════════════════════════════════════════════════ */
+async function callOllama(prompt, modelName = 'llama3.1') {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 300000) // 5 min timeout (model loading on CPU is slow)
 
@@ -48,7 +79,7 @@ async function callOllama(prompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.1',
+        model: modelName,
         prompt,
         stream: false,
         options: { temperature: 0.7 }
@@ -68,7 +99,7 @@ async function callOllama(prompt) {
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       console.error('Ollama raw response:', raw.substring(0, 500))
-      throw new Error('Impossible d\'extraire le JSON de la réponse Ollama')
+      throw new Error("Impossible d'extraire le JSON de la réponse Ollama")
     }
 
     return JSON.parse(jsonMatch[0])
@@ -127,7 +158,8 @@ async function fetchAdzunaJobs(domaine, paysCible) {
 /* ── POST handler ───────────────────────────────────── */
 export async function POST(request) {
   try {
-    const profile = await request.json()
+    const body = await request.json()
+    const { model = 'ollama-fast', ...profile } = body
 
     // Validate required fields
     const required = ['email', 'niveau', 'diplome', 'anneeObtention', 'competences', 'experience', 'langues', 'disponibilite', 'typeTravail', 'paysCible']
@@ -144,11 +176,18 @@ export async function POST(request) {
     let aiResult
     try {
       const prompt = buildPrompt(profile)
-      aiResult = await callOllama(prompt)
+      if (model === 'gemini') {
+        aiResult = await callGemini(prompt)
+      } else if (model === 'ollama-fast') {
+        aiResult = await callOllama(prompt, 'llama3.2:1b')
+      } else {
+        // model === 'ollama' (Llama 3.1)
+        aiResult = await callOllama(prompt, 'llama3.1')
+      }
     } catch (err) {
-      console.error('Ollama error:', err.message)
+      console.error('AI error:', err.message)
       return NextResponse.json(
-        { error: 'Impossible de contacter le service IA (Ollama). Vérifiez qu\'il est lancé sur localhost:11434.' },
+        { error: `Impossible de contacter le service IA. ${err.message}` },
         { status: 503 }
       )
     }

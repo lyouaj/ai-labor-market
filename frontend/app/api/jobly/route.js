@@ -179,7 +179,7 @@ async function handleGemini(systemPrompt, messages) {
 /* ══════════════════════════════════════════════════════
    Ollama (Llama 3.1) streaming handler
    ══════════════════════════════════════════════════════ */
-async function handleOllama(systemPrompt, messages) {
+async function handleOllama(systemPrompt, messages, modelName = 'llama3.1') {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 300000) // 5 min
 
@@ -194,7 +194,7 @@ async function handleOllama(systemPrompt, messages) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.1',
+        model: modelName,
         messages: ollamaMessages,
         stream: true,
         options: { temperature: 0.7 },
@@ -290,7 +290,9 @@ export async function POST(request) {
 
     // Route to the selected model
     if (model === 'ollama') {
-      return handleOllama(systemPrompt, messages)
+      return handleOllama(systemPrompt, messages, 'llama3.1')
+    } else if (model === 'ollama-fast') {
+      return handleOllama(systemPrompt, messages, 'llama3.2:1b')
     } else {
       return handleGemini(systemPrompt, messages)
     }

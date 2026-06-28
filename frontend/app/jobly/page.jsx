@@ -17,11 +17,26 @@ export default function JoblyPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
-  const [selectedModel, setSelectedModel] = useState('gemini')
+  const [selectedModel, setSelectedModel] = useState('ollama-fast')
   const [savedChat, setSavedChat] = useState(false)
   const chatEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const inputRef = useRef(null)
+
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Hydrate from sessionStorage AFTER first render to avoid mismatch
+  useEffect(() => {
+    setIsMounted(true)
+    const sMessages = sessionStorage.getItem('jobly_messages')
+    if (sMessages) setMessages(JSON.parse(sMessages))
+    const sModel = sessionStorage.getItem('jobly_model')
+    if (sModel) setSelectedModel(sModel)
+  }, [])
+
+  // Persist messages and model to sessionStorage
+  useEffect(() => { if (isMounted) sessionStorage.setItem('jobly_messages', JSON.stringify(messages)) }, [messages, isMounted])
+  useEffect(() => { if (isMounted) sessionStorage.setItem('jobly_model', selectedModel) }, [selectedModel, isMounted])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -179,7 +194,7 @@ export default function JoblyPage() {
         </div>
         <div className="jobly-page-header-badge">
           <Sparkles size={12} />
-          {selectedModel === 'gemini' ? 'Gemini Flash' : 'Llama 3.1'}
+          {selectedModel === 'gemini' ? 'Gemini Flash' : selectedModel === 'ollama-fast' ? 'Llama 3.2' : 'Llama 3.1'}
         </div>
       </div>
 
@@ -196,6 +211,15 @@ export default function JoblyPage() {
             <span className="jobly-model-badge jobly-model-badge-green">Rapide</span>
           </button>
           <button
+            className={`jobly-model-btn ${selectedModel === 'ollama-fast' ? 'active' : ''}`}
+            onClick={() => setSelectedModel('ollama-fast')}
+            disabled={isLoading}
+          >
+            <Cpu size={14} />
+            <span>Llama 3.2</span>
+            <span className="jobly-model-badge jobly-model-badge-orange">⚡ Ultra-rapide</span>
+          </button>
+          <button
             className={`jobly-model-btn ${selectedModel === 'ollama' ? 'active' : ''}`}
             onClick={() => setSelectedModel('ollama')}
             disabled={isLoading}
@@ -208,6 +232,8 @@ export default function JoblyPage() {
         <div className="jobly-model-desc">
           {selectedModel === 'gemini'
             ? 'Rapide · Nécessite internet'
+            : selectedModel === 'ollama-fast'
+            ? '⚡ Ultra-rapide · Local · 1.3GB'
             : 'Confidentiel · Fonctionne hors-ligne'}
         </div>
       </div>
