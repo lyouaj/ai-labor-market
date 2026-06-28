@@ -18,7 +18,7 @@ export default function JoblyChat() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
-  const [selectedModel, setSelectedModel] = useState('gemini')
+  const [selectedModel, setSelectedModel] = useState('ollama-fast')
   const chatEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const inputRef = useRef(null)
@@ -187,17 +187,26 @@ export default function JoblyChat() {
               onClick={() => setSelectedModel('gemini')}
               disabled={isLoading}
             >
-              <Globe size={11} />
+              <Globe size={10} />
               Gemini
-              <span className="jobly-model-badge-sm jobly-model-badge-green">Rapide</span>
+              <span className="jobly-model-badge-sm jobly-model-badge-green">API</span>
+            </button>
+            <button
+              className={`jobly-model-btn-sm ${selectedModel === 'ollama-fast' ? 'active' : ''}`}
+              onClick={() => setSelectedModel('ollama-fast')}
+              disabled={isLoading}
+            >
+              <Cpu size={10} />
+              Llama 3.2
+              <span className="jobly-model-badge-sm jobly-model-badge-orange">Rapide</span>
             </button>
             <button
               className={`jobly-model-btn-sm ${selectedModel === 'ollama' ? 'active' : ''}`}
               onClick={() => setSelectedModel('ollama')}
               disabled={isLoading}
             >
-              <Cpu size={11} />
-              Llama
+              <Cpu size={10} />
+              Llama 3.1
               <span className="jobly-model-badge-sm jobly-model-badge-blue">Privé</span>
             </button>
           </div>

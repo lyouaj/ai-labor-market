@@ -4348,8 +4348,8 @@ a { text-decoration: none; color: inherit; }
 /* ── Float Compact Model Bar ────────────────────────── */
 .jobly-model-bar-compact {
   display: flex;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: 3px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border-light);
   background: var(--white);
   flex-shrink: 0;
@@ -4360,18 +4360,19 @@ a { text-decoration: none; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 6px 8px;
+  gap: 3px;
+  padding: 5px 4px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--white);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all 0.15s var(--ease);
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .jobly-model-btn-sm:hover {
@@ -4392,12 +4393,13 @@ a { text-decoration: none; color: inherit; }
 }
 
 .jobly-model-badge-sm {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 600;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 8px;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════
