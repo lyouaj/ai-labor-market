@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" fill="none">
+  <!-- J letter with brain/neural network -->
+  <defs>
+    <linearGradient id="jGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0fa5a5"/>
+      <stop offset="100%" style="stop-color:#1a3c5e"/>
+    </linearGradient>
+    <linearGradient id="brainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ec4c4"/>
+      <stop offset="50%" style="stop-color:#17a2a2"/>
+      <stop offset="100%" style="stop-color:#1a3c5e"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Stylized J shape -->
+  <path d="M75 45 L75 130 Q75 165 50 175 Q30 182 15 172" 
+        stroke="url(#jGrad)" stroke-width="18" stroke-linecap="round" fill="none"/>
+  
+  <!-- Brain network circle at top of J -->
+  <circle cx="75" cy="32" r="28" fill="none" stroke="url(#brainGrad)" stroke-width="3"/>
+  
+  <!-- Neural network nodes -->
+  <circle cx="62" cy="22" r="3.5" fill="#0ec4c4"/>
+  <circle cx="82" cy="18" r="3" fill="#15b8b8"/>
+  <circle cx="90" cy="32" r="3.5" fill="#17a2a2"/>
+  <circle cx="78" cy="45" r="3" fill="#1a8a8a"/>
+  <circle cx="60" cy="40" r="3.5" fill="#0fb5b5"/>
+  <circle cx="72" cy="28" r="4" fill="#0ec4c4"/>
+  <circle cx="55" cy="30" r="3" fill="#13aeae"/>
+  <circle cx="85" cy="25" r="2.5" fill="#1a9e9e"/>
+  
+  <!-- Neural connections -->
+  <line x1="62" y1="22" x2="72" y2="28" stroke="#0ec4c4" stroke-width="1.2" opacity="0.7"/>
+  <line x1="72" y1="28" x2="82" y2="18" stroke="#15b8b8" stroke-width="1.2" opacity="0.7"/>
+  <line x1="72" y1="28" x2="90" y2="32" stroke="#17a2a2" stroke-width="1.2" opacity="0.7"/>
+  <line x1="72" y1="28" x2="78" y2="45" stroke="#1a8a8a" stroke-width="1.2" opacity="0.7"/>
+  <line x1="72" y1="28" x2="60" y2="40" stroke="#0fb5b5" stroke-width="1.2" opacity="0.7"/>
+  <line x1="62" y1="22" x2="55" y2="30" stroke="#13aeae" stroke-width="1.2" opacity="0.7"/>
+  <line x1="82" y1="18" x2="85" y2="25" stroke="#1a9e9e" stroke-width="1.2" opacity="0.7"/>
+  <line x1="55" y1="30" x2="60" y2="40" stroke="#0fb5b5" stroke-width="1" opacity="0.5"/>
+  <line x1="85" y1="25" x2="90" y2="32" stroke="#17a2a2" stroke-width="1" opacity="0.5"/>
+  <line x1="60" y1="40" x2="78" y2="45" stroke="#1a8a8a" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Outer decorative dots -->
+  <circle cx="98" cy="15" r="2" fill="#0ec4c4"/>
+  <line x1="90" y1="14" x2="96" y2="15" stroke="#0ec4c4" stroke-width="1" opacity="0.5"/>
+  <circle cx="100" cy="40" r="2.5" fill="#17a2a2"/>
+  <line x1="93" y1="35" x2="98" y2="39" stroke="#17a2a2" stroke-width="1" opacity="0.5"/>
+  
+  <!-- JOBLY text -->
+  <text x="130" y="100" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-1">
+    <tspan fill="#1a3c5e">JOBLY</tspan>
+  </text>
+  
+  <!-- AI text -->
+  <text x="420" y="100" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-size="72" font-weight="300" letter-spacing="-1">
+    <tspan fill="#0fa5a5">A</tspan>
+    <tspan fill="#0fa5a5">I</tspan>
+  </text>
+  
+  <!-- Decorative dot on the I -->
+  <circle cx="498" cy="58" r="5" fill="#0ec4c4"/>
+  <circle cx="498" cy="58" r="2" fill="#1a3c5e"/>
+  
+  <!-- Subtitle -->
+  <text x="130" y="128" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="3.5" fill="#17a2a2">
+    ASSISTÉE PAR INTELLIGENCE ARTIFICIELLE
+  </text>
+</svg>

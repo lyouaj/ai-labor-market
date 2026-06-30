@@ -115,11 +115,13 @@ export default function Accueil() {
           <div className="hero-badge">
             <Zap size={12} /> Jobly — Plateforme IA d'Analyse du Marché du Travail
           </div>
-          <h1>
-            Comprendre l'Impact de<br />
-            <span className="hero-gradient-text">l'Intelligence Artificielle</span><br />
-            sur le Marché du Travail
-          </h1>
+          <div className="hero-logo-text">
+            <h1 className="hero-brand">
+              <span className="hero-brand-jobly">JOBLY</span>
+              <span className="hero-brand-ai">AI</span>
+            </h1>
+            <p className="hero-brand-subtitle">ASSISTÉE PAR INTELLIGENCE ARTIFICIELLE</p>
+          </div>
           <p className="hero-sub">
             Une plateforme d'analyse prédictive alimentée par le Machine Learning pour anticiper les tendances de l'emploi mondial, analyser le sentiment médiatique et fournir des prévisions éclairées.
           </p>
